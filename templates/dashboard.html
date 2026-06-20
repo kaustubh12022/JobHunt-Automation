@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoApply — Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        
+        /* Glass panels */
+        .glass {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+        
+        /* Header */
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        header h1 { font-size: 1.75rem; font-weight: 700; color: #fff; }
+        header h1 i { color: #3b82f6; margin-right: 0.5rem; }
+        header p { color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem; }
+        
+        /* Status badge */
+        .badge {
+            padding: 0.5rem 1rem; border-radius: 999px;
+            font-weight: 600; font-size: 0.85rem;
+            display: flex; align-items: center; gap: 0.5rem;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .badge-idle { background: rgba(100,116,139,0.2); color: #94a3b8; }
+        .badge-running { background: rgba(59,130,246,0.15); color: #60a5fa; border-color: rgba(59,130,246,0.3); }
+        .badge-done { background: rgba(34,197,94,0.15); color: #4ade80; border-color: rgba(34,197,94,0.3); }
+        .pulse { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+        
+        /* Grid layout */
+        .grid-3 { display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+        
+        /* Platform toggles */
+        .toggle-group { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+        .toggle-chip {
+            display: flex; align-items: center; gap: 0.4rem;
+            padding: 0.4rem 0.75rem; border-radius: 8px;
+            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer; font-size: 0.8rem; color: #94a3b8;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .toggle-chip.active {
+            background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.4);
+            color: #60a5fa;
+        }
+        .toggle-chip input { display: none; }
+        
+        /* Buttons */
+        .btn {
+            width: 100%; padding: 0.75rem 1rem; border: none; border-radius: 10px;
+            font-weight: 600; font-size: 0.95rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+            transition: all 0.2s;
+        }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-blue { background: #3b82f6; color: white; }
+        .btn-blue:hover:not(:disabled) { background: #2563eb; box-shadow: 0 0 20px rgba(59,130,246,0.3); }
+        .btn-purple { background: #7c3aed; color: white; margin-top: 0.75rem; }
+        .btn-purple:hover:not(:disabled) { background: #6d28d9; box-shadow: 0 0 20px rgba(124,58,237,0.3); }
+        
+        /* Stats */
+        .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-top: 1rem; }
+        .stat-box {
+            background: rgba(15,23,42,0.5); border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px; padding: 0.75rem; text-align: center;
+        }
+        .stat-box .label { font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+        .stat-box .value { font-size: 1.1rem; font-weight: 700; color: #fff; margin-top: 0.25rem; }
+        .stat-box .value.green { color: #4ade80; }
+        
+        /* Progress bar */
+        .progress-wrap {
+            display: flex; align-items: center; gap: 0.75rem;
+        }
+        .progress-bar-bg {
+            flex: 1; height: 10px; background: rgba(15,23,42,0.6);
+            border-radius: 999px; overflow: hidden; border: 1px solid rgba(255,255,255,0.06);
+        }
+        .progress-bar-fill {
+            height: 100%; background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            border-radius: 999px; transition: width 0.5s ease;
+        }
+        .progress-pct { font-size: 0.85rem; font-weight: 600; color: #94a3b8; min-width: 3rem; text-align: right; }
+        
+        /* Log window */
+        .log-window {
+            font-family: 'Consolas', 'Courier New', monospace;
+            background: #0a0e1a;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            padding: 1rem;
+            height: 420px;
+            overflow-y: auto;
+            font-size: 0.82rem;
+            line-height: 1.6;
+        }
+        .log-window::-webkit-scrollbar { width: 6px; }
+        .log-window::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        .log-entry { margin-bottom: 2px; }
+        .log-info { color: #33ff00; }
+        .log-error { color: #ff4444; }
+        .log-warning { color: #ffcc00; }
+        .log-test { color: #c084fc; }
+        
+        /* Log header */
+        .log-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+        .log-header h2 { font-size: 1.1rem; font-weight: 600; color: #fff; }
+        .clear-btn {
+            background: none; border: 1px solid rgba(255,255,255,0.1); color: #64748b;
+            padding: 0.3rem 0.75rem; border-radius: 6px; cursor: pointer;
+            font-size: 0.75rem; transition: all 0.2s;
+        }
+        .clear-btn:hover { color: #e2e8f0; border-color: rgba(255,255,255,0.2); }
+        
+        h2 i { color: #64748b; margin-right: 0.4rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <!-- Header -->
+        <header>
+            <div>
+                <h1><i class="fas fa-rocket"></i>AutoApply Dashboard</h1>
+                <p>Automated job application pipeline — hyper-optimized for DeepSeek</p>
+                <a href="/edit_profile" class="btn" style="display:inline-flex; align-items:center; gap:0.5rem; background:rgba(255,255,255,0.06); color:#94a3b8; border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:0.4rem 0.8rem; font-size:0.8rem; text-decoration:none; margin-top:0.75rem; transition:all 0.2s;"><i class="fa-solid fa-user-pen"></i> Edit Profile</a>
+            </div>
+            <div id="status-badge" class="badge badge-idle">
+                <span id="status-dot" class="pulse" style="width:8px;height:8px;border-radius:50%;background:#64748b;display:inline-block;"></span>
+                <span id="status-text">Idle</span>
+            </div>
+        </header>
+
+        <!-- Controls & Status -->
+        <div class="grid-3">
+            
+            <!-- Left: Controls -->
+            <div class="glass">
+                <h2><i class="fas fa-sliders"></i>Pipeline Controls</h2>
+                
+                <!-- Platform Toggles -->
+                <p style="color:#64748b;font-size:0.8rem;margin-top:1rem;">Select Platforms:</p>
+                <div class="toggle-group" id="platform-toggles">
+                    <label class="toggle-chip active" data-platform="linkedin">
+                        <input type="checkbox" checked> <i class="fab fa-linkedin"></i> LinkedIn
+                    </label>
+                    <label class="toggle-chip active" data-platform="indeed">
+                        <input type="checkbox" checked> <i class="fas fa-briefcase"></i> Indeed
+                    </label>
+
+                </div>
+                
+                <div style="margin-top: 1.25rem; display: flex; align-items: center; gap: 0.75rem;">
+                    <label class="toggle-chip" id="dry-run-toggle">
+                        <input type="checkbox" id="dry-run-checkbox"> <i class="fas fa-shield-halved"></i> Dry Run Mode
+                    </label>
+                </div>
+                
+                <div style="margin-top: 1.25rem;">
+                    <button id="start-btn" class="btn btn-blue" onclick="startPipeline()">
+                        <i class="fas fa-play"></i> Start Daily Pipeline
+                    </button>
+                    <button id="test-btn" class="btn btn-purple" onclick="startTestPipeline()">
+                        <i class="fas fa-vial"></i> 🧪 Test Mode (Isolated)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right: Status -->
+            <div class="glass">
+                <h2><i class="fas fa-satellite-dish"></i>System Status</h2>
+                
+                <div class="progress-wrap" style="margin-top:1rem;">
+                    <div class="progress-bar-bg">
+                        <div id="progress-bar" class="progress-bar-fill" style="width: 0%"></div>
+                    </div>
+                    <span id="progress-text" class="progress-pct">0%</span>
+                </div>
+                
+                <div class="stat-grid">
+                    <div class="stat-box">
+                        <div class="label">Phase</div>
+                        <div id="phase-display" class="value" style="color:#60a5fa;font-size:0.9rem;">Idle</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">Jobs Found</div>
+                        <div id="stat-found" class="value">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">Scored</div>
+                        <div id="stat-scored" class="value">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">Shortlisted</div>
+                        <div id="stat-shortlisted" class="value green">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs -->
+        <div class="glass">
+            <div class="log-header">
+                <h2><i class="fas fa-terminal"></i>Live Output</h2>
+                <button class="clear-btn" onclick="clearLogs()"><i class="fas fa-trash-alt"></i> Clear</button>
+            </div>
+            <div id="log-window" class="log-window">
+                <div class="log-entry" style="color:#475569;">Waiting for pipeline to start...</div>
+            </div>
+        </div>
+        
+    </div>
+
+    <script>
+        const logWindow = document.getElementById('log-window');
+        let pollInterval;
+
+        // ── Platform toggle logic ──
+        document.querySelectorAll('.toggle-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                const cb = chip.querySelector('input');
+                cb.checked = !cb.checked;
+                chip.classList.toggle('active', cb.checked);
+            });
+        });
+
+        function getSelectedPlatforms() {
+            const platforms = [];
+            document.querySelectorAll('.toggle-chip').forEach(chip => {
+                if (chip.querySelector('input').checked) {
+                    platforms.push(chip.dataset.platform);
+                }
+            });
+            return platforms.length > 0 ? platforms : ["linkedin", "indeed"];
+        }
+
+        // ── Pipeline controls ──
+        function startPipeline() {
+            const platforms = getSelectedPlatforms();
+            const dryRun = document.getElementById('dry-run-checkbox').checked;
+            fetch('/api/start', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({platforms: platforms, dry_run: dryRun})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if(data.error) alert(data.error);
+                else { disableButtons(); pollStatus(); }
+            });
+        }
+
+        function startTestPipeline() {
+            const platforms = getSelectedPlatforms();
+            fetch('/api/test-start', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({platforms: platforms})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if(data.error) alert(data.error);
+                else { disableButtons(); pollStatus(); }
+            });
+        }
+
+        function disableButtons() {
+            document.getElementById('start-btn').disabled = true;
+            document.getElementById('test-btn').disabled = true;
+        }
+
+        function enableButtons() {
+            document.getElementById('start-btn').disabled = false;
+            document.getElementById('test-btn').disabled = false;
+        }
+
+        function clearLogs() { logWindow.innerHTML = ''; }
+
+        // ── Log streaming ──
+        function updateLogs() {
+            fetch('/api/logs')
+                .then(r => r.json())
+                .then(logs => {
+                    logs.forEach(log => {
+                        const div = document.createElement('div');
+                        div.className = 'log-entry';
+                        if(log.includes('ERROR') || log.includes('❌')) div.classList.add('log-error');
+                        else if(log.includes('WARNING') || log.includes('⚠️')) div.classList.add('log-warning');
+                        else if(log.includes('[TEST]') || log.includes('🧪')) div.classList.add('log-test');
+                        else div.classList.add('log-info');
+                        div.textContent = log;
+                        logWindow.appendChild(div);
+                    });
+                    if(logs.length > 0) logWindow.scrollTop = logWindow.scrollHeight;
+                });
+        }
+
+        // ── Status polling ──
+        function pollStatus() {
+            if(!pollInterval) {
+                pollInterval = setInterval(() => {
+                    fetch('/api/status').then(r => r.json()).then(updateUI);
+                    updateLogs();
+                }, 2000);
+            }
+        }
+
+        function updateUI(status) {
+            const badge = document.getElementById('status-badge');
+            const dot = document.getElementById('status-dot');
+            const text = document.getElementById('status-text');
+            const phase = document.getElementById('phase-display');
+            const pbar = document.getElementById('progress-bar');
+            const ptxt = document.getElementById('progress-text');
+
+            phase.textContent = status.phase;
+
+            if (status.running) {
+                badge.className = 'badge badge-running';
+                dot.style.background = '#60a5fa';
+                dot.classList.add('pulse');
+                text.textContent = status.mode === 'test' ? '🧪 Test Running' : '🚀 Running';
+                disableButtons();
+
+                let pct = 0;
+                if(status.phase === 'scraping') pct = 15;
+                if(status.phase === 'scoring') pct = 40;
+                if(status.phase === 'tailoring') pct = 70;
+                if(status.phase === 'saving') pct = 90;
+                pbar.style.width = pct + '%';
+                ptxt.textContent = pct + '%';
+            } else {
+                dot.classList.remove('pulse');
+                enableButtons();
+                if (status.phase === 'done') {
+                    badge.className = 'badge badge-done';
+                    dot.style.background = '#4ade80';
+                    text.textContent = '✅ Complete';
+                    pbar.style.width = '100%';
+                    ptxt.textContent = '100%';
+                } else {
+                    badge.className = 'badge badge-idle';
+                    dot.style.background = '#64748b';
+                    text.textContent = 'Idle';
+                    pbar.style.width = '0%';
+                    ptxt.textContent = '0%';
+                }
+            }
+        }
+
+        // Start polling
+        pollStatus();
+    </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+You are a precise ATS scoring engine. Score how well the candidate matches this job.
+
+=== CANDIDATE PROFILE ===
+Summary: {candidate_summary}
+
+Skills:
+{candidate_skills}
+
+Experience:
+{candidate_experience}
+=========================
+
+=== JOB ===
+Title: {job_title}
+Description:
+{job_description}
+===========
+
+Return a JSON object with EXACTLY these 3 keys:
+- "score": integer 0-100 representing match percentage
+- "missing_skills": a short array of the TOP skills/qualifications the candidate LACKS for this role (max 5 items)
+- "reasons": a single short sentence explaining the score (max 20 words)
+
+CRITICAL: Return ONLY these 3 fields. Do NOT copy-paste the job description. Do NOT include employer wording.
+Return ONLY the raw JSON object. No markdown, no code blocks.
