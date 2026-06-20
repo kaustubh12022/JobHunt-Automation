@@ -1,0 +1,59 @@
+# ============================================
+# AutoApply Configuration
+# ============================================
+
+# --- AI Settings ---
+ai:
+  provider: "deepseek"
+  model: "deepseek-v4-flash"              # Single model for both scoring & tailoring
+  api_key: "YOUR_DEEPSEEK_API_KEY"
+  temperature: 0.3
+
+# --- Job Search Settings ---
+search:
+  platforms:
+    - "linkedin"
+    - "indeed"
+  search_terms:
+    # Simple, high-yield terms (Boolean AND/OR is unreliable in jobspy)
+    - "Automation Tester"
+    - "QA Automation"
+    - "Java Developer"
+    - ".NET Developer"
+    - "Software Tester"
+    - "Software Engineer"
+    - "Backend Developer"
+    - "Full Stack Developer"
+  locations:
+    - "Pune"
+    - "Mumbai"
+    - "Bangalore"
+  hours_old: 72
+  results_wanted: 20                      # Per-combination full page pull
+  job_types:
+    - "internship"
+    - "fulltime"
+  country_indeed: "India"
+  proxies: []                             # Add proxies here: ["user:pass@host:port"]
+
+# --- Scoring Settings ---
+scoring:
+  minimum_score: 50
+  top_n: 20
+
+# --- Output Settings ---
+output:
+  desktop_path: "C:/Users/kalek/OneDrive/Desktop"
+  folder_name: "AutoApply_Output"
+
+# --- Email Settings ---
+email:
+  enabled: true
+  sender: "kaustubh.kale.work@gmail.com"
+  recipient: "kaustubh.kale.work@gmail.com"
+  app_password: "YOUR_GMAIL_APP_PASSWORD"
+
+# --- Resume Settings ---
+resume:
+  style: "ats_clean"
+  max_pages: 1

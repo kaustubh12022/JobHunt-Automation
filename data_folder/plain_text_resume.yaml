@@ -1,0 +1,131 @@
+personal_information:
+  name: "Kaustubh"
+  surname: "Kale"
+  date_of_birth: ""
+  country: "India"
+  city: "Pune"
+  address: "Pune, India"
+  zip_code: ""
+  phone_prefix: "+91"
+  phone: "9975526627"
+  email: "kaustubh.kale.work@gmail.com"
+  github: ""
+  linkedin: "linkedin.com/in/kaustubhkale12"
+
+profile_summary: "Final-year IT engineering student skilled in Java, Python, SQL, DSA, and backend development with internship experience in modular features, API integration, UI technologies, and AI-driven automation pipelines. Hands-on experience with Automation Testing tools (Selenium, JUnit, Postman, pytest) and familiar with .NET/C# environments via Microsoft Azure certification."
+
+education_details:
+  - education_level: "Bachelors of Engineering in Information Technology"
+    institution: "SKNSITS, Lonavala"
+    field_of_study: "Information Technology"
+    final_evaluation_grade: "7.40 CGPA"
+    start_date: "2022"
+    year_of_completion: "2026"
+
+experience_details:
+  - position: "Java Developer Intern"
+    company: "CWIPedia Technologies"
+    employment_period: "Jan 25 - Feb 25"
+    location: "Pune, India"
+    industry: "Software Engineering"
+    key_responsibilities:
+      - responsibility_1: "Built modular backend components using Java, SQL, JDBC, and REST APIs, increasing reusability by 30%."
+      - responsibility_2: "Integrated third-party APIs and optimized data-processing, reducing response times by 20% via DSA."
+      - responsibility_3: "Developed responsive UI screens with HTML, CSS, and JavaScript, improving interface load speeds by 25%."
+      - responsibility_4: "Collaborated in Agile sprints to deliver tasks on time, participating in daily stand-ups and iterative reviews."
+
+projects:
+  - name: "SmartApply: AI-Driven Job Automation Pipeline"
+    description: "Engineered a scalable Python and Pandas-based web scraping pipeline to aggregate, filter, and deduplicate 800+ job postings daily, enforcing geographic and entry-level constraints. Integrated DeepSeek LLM with strategic prompt caching and optimized inference modes to reduce API token consumption by over 80% while increasing processing throughput. Designed a JSON-based multi-dimensional AI scoring algorithm that evaluates job descriptions against core technical stacks, explicitly filtering out senior roles and false positives. Built a local rendering engine using Jinja2 and WeasyPrint to dynamically generate ATS-compliant, tailored PDF resumes based on skills extracted from targeted job descriptions. Automated the entire workflow with Windows Task Scheduler, integrating SMTP email delivery and Excel tracker generation for seamless daily execution without manual intervention."
+    link: "Python, Pandas, DeepSeek API, Jinja2, WeasyPrint, BeautifulSoup"
+
+  - name: "CampFlow: Hospitality Automation & Booking Suite"
+    description: "Engineered a dynamic camping automation platform utilized by 5+ local business owners to solve booking gaps. Developed role-specific dashboards for Managers and Owners, featuring real-time business analytics. Implemented keyword-friendly SEO strategies to boost search visibility and organic traffic for hosted sites. Deployed the production-ready application on Vercel, streamlining the end-to-end booking workflow."
+    link: "Web Automation"
+
+  - name: "Neon-Pulse – Pattern Recognition & Logic Engine"
+    description: "Developed a logic-driven game with a recursive sequence system managing over 20 levels of difficulty. Designed a responsive 'Cyber-Neon' UI using CSS3 animations, achieving 100% layout consistency. Optimized DOM-based rendering for instant visual feedback, ensuring a zero-lag gameplay experience. Built a robust state-validation algorithm to compare user-input arrays against patterns with 100% accuracy."
+    link: "Vanilla JavaScript"
+
+achievements:
+  - name: "Lead NSS Coordinator"
+    description: "Managed campus-level events and coordinated activities for over 50 students."
+  - name: "Version Control Discipline"
+    description: "Maintained 0 merge conflicts across team repositories during development."
+  - name: "Crowdfunding & Event Logistics"
+    description: "Orchestrated student participation and managed budgets for campus initiatives."
+
+certifications:
+  - name: "Microsoft Azure Fundamentals"
+    description: "Foundational understanding of cloud concepts and Azure services."
+  - name: "Cybersecurity - Google (Coursera)"
+    description: "Completed comprehensive training on cybersecurity concepts."
+
+skills:
+  # --- Core Languages ---
+  - "Java"
+  - "Python"
+  - "SQL"
+  - "C# (Basics via Azure)"
+  - "JavaScript"
+  - "HTML"
+  - "CSS"
+
+  # --- Frameworks & Libraries ---
+  - "Spring Core (Basics)"
+  - "JDBC"
+  - "REST APIs"
+  - "JSON"
+  - "MVC Architecture"
+  - "Pandas"
+  - "Asyncio"
+  - "Jinja2"
+  - "BeautifulSoup"
+  - "Regex"
+
+  # --- Testing Tools ---
+  - "JUnit (Unit Testing)"
+  - "Postman (API Testing)"
+  - "Selenium (Basic UI Automation)"
+  - "pytest (Python Testing)"
+  - "Manual Testing Fundamentals"
+  - "Test Case Design"
+
+  # --- Data & Algorithms ---
+  - "Data Structures & Algorithms"
+  - "OOP"
+  - "DBMS"
+  - "Problem-Solving"
+
+  # --- Tools & Platforms ---
+  - "Git"
+  - "GitHub"
+  - "VS Code"
+  - "IntelliJ IDEA"
+  - "MySQL"
+  - "Maven"
+  - "Spring Tool Suite (STS)"
+  - "Agile/Scrum"
+  - "Windows Task Scheduler"
+  - "Excel (Automation)"
+
+languages:
+  - language: "English"
+    proficiency: "Professional"
+  - language: "Hindi"
+    proficiency: "Native"
+
+work_preferences:
+  remote_work: "Yes"
+  in_person_work: "Yes"
+  open_to_relocation: "Yes"
+
+# --- Target Role Domains (for scoring alignment) ---
+target_roles:
+  - "Java Developer"
+  - "Automation Tester / QA Automation"
+  - ".NET Developer"
+  - "Software Engineer"
+  - "Backend Developer"
+  - "Full Stack Developer"
+  - "Software Tester"

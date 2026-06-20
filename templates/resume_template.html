@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ resume.personal_information.name }} {{ resume.personal_information.surname }} - Resume</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        body {
+            font-family: "Times New Roman", Times, serif;
+            color: #000;
+            margin: 0;
+            padding: 0.45in 0.55in; /* slightly increased padding */
+            box-sizing: border-box;
+            background-color: white;
+            font-size: 10.5pt;
+            line-height: 1.4; /* increased line height for readability */
+        }
+
+        /* Typography */
+        h1 {
+            font-size: 22pt;
+            font-weight: bold;
+            color: #000;
+            margin: 0 0 6px 0;
+            text-align: center;
+        }
+        h2 {
+            font-size: 11pt;
+            font-weight: bold;
+            color: #000;
+            text-transform: uppercase;
+            border-bottom: 1px solid #000;
+            padding-bottom: 3px;
+            margin: 14px 0 6px 0;
+        }
+
+        /* Header Contact Info */
+        .contact {
+            text-align: center;
+            font-size: 9.5pt;
+            color: #000;
+            margin-bottom: 12px;
+        }
+        .contact a {
+            color: #000;
+            text-decoration: none;
+        }
+
+        /* Summary */
+        .summary {
+            font-size: 10.5pt;
+            color: #000;
+            margin-bottom: 12px;
+            text-align: justify;
+        }
+
+        /* Skills */
+        .skills-container {
+            margin-bottom: 12px;
+        }
+        .skills-container ul {
+            margin: 0;
+            padding-left: 15px;
+        }
+        .skills-container li {
+            margin-bottom: 3px;
+            padding-left: 0;
+        }
+
+        /* Robust Item Layouts */
+        .item {
+            margin-bottom: 10px;
+            page-break-inside: avoid; /* Prevent orphans */
+        }
+        
+        .item-row {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+            margin-bottom: 2px;
+        }
+        .item-left {
+            display: table-cell;
+            text-align: left;
+            vertical-align: bottom;
+        }
+        .item-right {
+            display: table-cell;
+            text-align: right;
+            vertical-align: bottom;
+            white-space: nowrap;
+        }
+        
+        .item-title {
+            font-weight: bold;
+            font-size: 10.5pt;
+        }
+        .item-location, .item-date {
+            font-weight: normal;
+            font-size: 10.5pt;
+        }
+        .item-subtitle {
+            font-size: 10.5pt;
+            font-style: italic;
+        }
+
+        /* Bullet Points */
+        ul {
+            margin: 4px 0 0 0;
+            padding-left: 15px;
+        }
+        li {
+            margin-bottom: 4px;
+            padding-left: 0px;
+            text-align: justify;
+        }
+        li::marker {
+            font-size: 10pt;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>{{ resume.personal_information.name }} {{ resume.personal_information.surname }}</h1>
+        <div class="contact">
+            {% set contact_items = [] %}
+            {% if resume.personal_information.phone %}
+                {% set _ = contact_items.append(resume.personal_information.phone) %}
+            {% endif %}
+            {% if resume.personal_information.email %}
+                {% set _ = contact_items.append('<a href="mailto:' ~ resume.personal_information.email ~ '">' ~ resume.personal_information.email ~ '</a>') %}
+            {% endif %}
+            {% if resume.personal_information.linkedin %}
+                {% set _ = contact_items.append('<a href="https://' ~ resume.personal_information.linkedin | replace('https://', '') ~ '">' ~ resume.personal_information.linkedin | replace('https://', '') | replace('www.', '') ~ '</a>') %}
+            {% endif %}
+            {% if resume.personal_information.github %}
+                {% set _ = contact_items.append('<a href="' ~ resume.personal_information.github ~ '">GitHub</a>') %}
+            {% endif %}
+            {{ contact_items | join(' | ') | safe }}
+        </div>
+    </header>
+
+    {% if resume.profile_summary or resume.professional_summary %}
+    <div>
+        <h2>PROFILE</h2>
+        <div class="summary">
+            {{ resume.profile_summary or resume.professional_summary }}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if resume.education_details %}
+    <div>
+        <h2>EDUCATION</h2>
+        {% for edu in resume.education_details %}
+        <div class="item">
+            <div class="item-row">
+                <div class="item-left item-title">{{ edu.institution or edu.university }}</div>
+                <div class="item-right item-location">Pune, India</div>
+            </div>
+            <div class="item-row">
+                <div class="item-left item-subtitle">{{ edu.education_level }} in {{ edu.field_of_study }}</div>
+                <div class="item-right item-date">{{ edu.year_of_completion }}</div>
+            </div>
+            <ul>
+                <li>Secured {{ edu.final_evaluation_grade }}.</li>
+            </ul>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if resume.skills %}
+    <div class="skills-container">
+        <h2>SKILLS</h2>
+        <ul>
+            <li><strong>Technical & Tools:</strong> {{ resume.skills | join(', ') }}</li>
+        </ul>
+    </div>
+    {% endif %}
+
+    {# Macro for Experience block #}
+    {% macro render_experience() %}
+        {% if resume.experience_details %}
+        <div>
+            <h2>EXPERIENCE</h2>
+            {% for exp in resume.experience_details %}
+            <div class="item">
+                <div class="item-row">
+                    <div class="item-left item-title">{{ exp.company }}</div>
+                    <div class="item-right item-location">{{ exp.location }}</div>
+                </div>
+                <div class="item-row">
+                    <div class="item-left item-subtitle">{{ exp.position }}</div>
+                    <div class="item-right item-date">{{ exp.employment_period or (exp.date_from ~ ' - ' ~ (exp.date_to if exp.date_to else 'Present')) }}</div>
+                </div>
+                <ul>
+                    {% for resp in exp.key_responsibilities %}
+                        {% if resp is mapping %}
+                            <li>{{ resp.values() | first }}</li>
+                        {% else %}
+                            <li>{{ resp }}</li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% endmacro %}
+
+    {# Macro for Projects block #}
+    {% macro render_projects() %}
+        {% if resume.projects %}
+        <div>
+            <h2>PROJECTS</h2>
+            {% for proj in resume.projects %}
+            <div class="item">
+                <div class="item-row">
+                    <div class="item-left item-title">{{ proj.name }}</div>
+                    <div class="item-right item-date">{{ proj.tech_stack or proj.link }}</div>
+                </div>
+                <ul>
+                    {% if proj.description is string %}
+                        {% for bullet in proj.description.split('. ') %}
+                            {% if bullet.strip() %}
+                                <li>{{ bullet.strip() }}{% if not bullet.endswith('.') %}.{% endif %}</li>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        {% for desc in proj.description %}
+                            <li>{{ desc }}</li>
+                        {% endfor %}
+                    {% endif %}
+                </ul>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% endmacro %}
+
+    {# Dynamic Section Reordering #}
+    {% if job and job.is_testing_role %}
+        {{ render_experience() }}
+        {{ render_projects() }}
+    {% else %}
+        {{ render_projects() }}
+        {{ render_experience() }}
+    {% endif %}
+
+    {% if resume.certifications %}
+    <div>
+        <h2>CERTIFICATIONS</h2>
+        <ul>
+            {% for cert in resume.certifications %}
+            <li>{{ cert.name }} - {{ cert.description }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    
+    {% if resume.achievements %}
+    <div>
+        <h2>ACHIEVEMENTS</h2>
+        <ul>
+            {% for ach in resume.achievements %}
+            <li><strong>{{ ach.name }}:</strong> {{ ach.description }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+</body>
+</html>
