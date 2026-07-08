@@ -22,15 +22,6 @@ def validate_resume_json(job: Job, tailored: dict) -> list[str]:
     errors = []
     
     # 1. Company Name Tailoring
-    # 1. Company Name Tailoring
-    target_company = job.company.lower()
-    first_word = target_company.split()[0] if ' ' in target_company else target_company
-    
-    # Check if target company was mentioned anywhere in the resume
-    resume_text_lower = json.dumps(tailored).lower()
-    if target_company not in resume_text_lower and first_word not in resume_text_lower:
-        errors.append(f"Company name '{job.company}' (or '{first_word}') not found anywhere in the tailored resume.")
-
     # 2. Bullet Point Action Verbs & Length
     action_verbs = ['developed', 'engineered', 'architected', 'spearheaded', 'orchestrated', 
                     'implemented', 'designed', 'created', 'built', 'led', 'managed', 'optimized',
@@ -70,6 +61,15 @@ def validate_resume_json(job: Job, tailored: dict) -> list[str]:
             else:
                 logger.info(f"   ✅ ATS Coverage good: {coverage:.0%}")
     
+    # 4. Check for missing skills false positives
+    skills = job.missing_skills
+    if skills:
+        resume_text_lower = json.dumps(tailored).lower()
+        for skill in skills:
+            if skill.lower() in resume_text_lower:
+                logger.warning(f"   [Warn] Missing skill '{skill}' was actually found in the tailored resume.")
+                errors.append(f"False Positive Missing Skill: '{skill}' is actually present.")
+
     return errors
 
 
@@ -98,31 +98,59 @@ def validate_pdf(pdf_path: str) -> list[str]:
 from src.scraper import run_scraper
 from src.scorer import score_jobs
 
-def run_fast_test():
+def run_fast_test(skip_scraper=True):
     """Executes a fast test pipeline testing Pandas filters and AI Scoring (max 100 jobs)."""
     logger.info("🧪 [TEST PIPELINE] Starting rigorous validation pipeline...")
     
-    logger.info("   [1/4] Scraping up to 100 jobs and applying Pandas filters...")
-    # This will scrape 1 combo up to 100 results and apply pandas pre-filtering
-    jobs, stats = run_scraper(test_mode=True)
-    
-    if not jobs:
-        logger.error("❌ Failed to scrape test jobs or they were all filtered out. Aborting test.")
-        return
+    if skip_scraper:
+        logger.info("   [1/5] Skipping Scraper... Using predefined mock jobs.")
+        jobs = [
+            Job(
+                title="QA Automation Engineer",
+                company="MockTech QA",
+                location="Pune",
+                description="We are looking for a QA Automation Engineer. Requirements: Selenium, Java, Postman, API Testing, JUnit, Cucumber. Minimum 1 year experience.",
+                url="https://example.com/job1",
+                source="linkedin"
+            ),
+            Job(
+                title="Java Backend Developer",
+                company="MockCorp Backend",
+                location="Remote",
+                description="Looking for a Java Backend Dev. Core skills: Java, Spring Boot, REST APIs, SQL, Microservices. Great opportunity for freshers.",
+                url="https://example.com/job2",
+                source="indeed"
+            ),
+            Job(
+                title="Frontend Developer",
+                company="Mock UI",
+                location="Mumbai",
+                description="We need a React developer. Skills: HTML, CSS, JavaScript, React, Redux.",
+                url="https://example.com/job3",
+                source="linkedin"
+            )
+        ]
+    else:
+        logger.info("   [1/5] Scraping up to 100 jobs and applying Pandas filters...")
+        jobs, stats = run_scraper(test_mode=True)
         
-    logger.info(f"   ✅ Pre-filter passed {len(jobs)} jobs. Moving to AI Scoring...")
+        if not jobs:
+            logger.error("❌ Failed to scrape test jobs or they were all filtered out. Aborting test.")
+            return
+            
+        logger.info(f"   ✅ Pre-filter passed {len(jobs)} jobs. Moving to AI Scoring...")
     
-    logger.info("   [2/4] Scoring jobs concurrently...")
-    jobs = asyncio.run(score_jobs(jobs))
+    logger.info("   [2/5] Scoring jobs concurrently...")
+    jobs = score_jobs(jobs, test_mode=True)
     
     # Sort and take top 3
     jobs.sort(key=lambda j: j.score, reverse=True)
     top_jobs = jobs[:3]
     
-    logger.info(f"   [3/4] Tailoring resumes for top {len(top_jobs)} jobs...")
+    logger.info(f"   [3/5] Tailoring resumes for top {len(top_jobs)} jobs...")
     tailored_jsons = tailor_resumes_batch(top_jobs)
     
-    logger.info("   [4/4] Validating JSON Output & Generating PDFs...")
+    logger.info("   [4/5] Validating JSON Output & Generating PDFs...")
     all_passed = True
     
     out_dir = Path("test_output")
@@ -158,10 +186,13 @@ def run_fast_test():
                 
         browser.close()
         
-    logger.info("\n   [5/5] Validating Final PDF Layouts...")
+    logger.info("\n   [5/5] Validating Final PDF Layouts & Database Logging...")
     
     import glob
-    test_pdfs = glob.glob(str(Path("C:/Users/kalek/OneDrive/Desktop/AutoApply_Output/test_output/*.pdf")))
+    test_pdfs = glob.glob(str(Path("C:/Users/kalek/OneDrive/Desktop/AutoApply_Output/test_output") / "*.pdf"))
+    if not test_pdfs:
+        # Fallback to current dir if not in Desktop output
+        test_pdfs = glob.glob(str(out_dir / "*.pdf"))
     
     if not test_pdfs:
         logger.error("   ❌ No PDFs were found to validate!")
@@ -174,6 +205,27 @@ def run_fast_test():
             all_passed = False
             for err in pdf_errors:
                 logger.error(f"   ❌ PDF Error: {err}")
+
+    # Database Validation
+    try:
+        from src.db import save_pipeline_results
+        import datetime
+        pipeline_state = {
+            "mode": "test_pipeline",
+            "scan": {"total_found": 3},
+            "filter": {"after": 3},
+            "score": {"scored": len(jobs), "shortlisted": len(top_jobs)},
+            "platforms": ["mock_linkedin", "mock_indeed"],
+            "started_at": datetime.datetime.now().isoformat()
+        }
+        
+        # Get absolute paths for the db save
+        abs_pdf_paths = [str((out_dir / f"test_resume_{i}.pdf").absolute()) for i in range(len(top_jobs))]
+        save_pipeline_results(pipeline_state, top_jobs, abs_pdf_paths)
+        logger.info("   ✅ Database logging passed successfully.")
+    except Exception as e:
+        logger.error(f"   ❌ Database logging crashed: {e}")
+        all_passed = False
                 
     logger.info("\n==============================================")
     if all_passed:

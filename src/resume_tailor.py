@@ -16,28 +16,42 @@ from src.ai_engine import call_ai_tailoring_async
 from src.config_loader import load_resume
 
 
-async def tailor_resume_async(job: Job) -> dict:
+async def tailor_resume_async(job: Job, selected_skills: list[str] = None) -> dict:
     """
     Calls DeepSeek with thinking ENABLED to generate a Delta JSON,
     then merges it with the master resume's static fields.
     """
     master_resume = load_resume()
 
-    # Fallback if Phase 2 compression failed or wasn't run
-    reqs = getattr(job, "extracted_requirements", None)
-    if not reqs:
-        reqs = "Requires deep technical analysis based on the JD."
-
-    # Send the compressed JD requirements instead of the full 1000-word JD
+    # Pass the full raw job description + Phase 2 signals
     user_prompt = (
         f"Job Title: {job.title}\n"
         f"Company: {job.company}\n"
         f"Location: {job.location}\n\n"
-        f"Core Requirements:\n{reqs}"
+        f"=== PHASE 2 PRIORITY SIGNALS ===\n"
+        f"Score: {job.score}%\n"
+        f"Core Match Areas: {getattr(job, 'extracted_requirements', 'N/A')}\n"
+        f"Missing Skills: {', '.join(getattr(job, 'missing_skills', []))}\n"
+        f"Is Testing Role: {getattr(job, 'is_testing_role', False)}\n\n"
+    )
+    
+    if selected_skills:
+        user_prompt += (
+            f"=== ADDITIONAL CONFIRMED SKILLS ===\n"
+            f"The candidate has confirmed they also possess: [{', '.join(selected_skills)}]\n"
+            f"You MUST naturally weave these skills into the resume — in bullet points,\n"
+            f"project descriptions, and the skills list. They should appear organic,\n"
+            f"not forced. Present them in the most impactful context possible.\n\n"
+        )
+        
+    user_prompt += (
+        f"=== COMPLETE JOB DESCRIPTION ===\n"
+        f"{job.description}"
     )
 
     try:
-        response_text = await call_ai_tailoring_async(user_prompt)
+        response_text, tokens = await call_ai_tailoring_async(user_prompt)
+        job.tokens_used = getattr(job, 'tokens_used', 0) + tokens
 
         # Robust Markdown stripping
         cleaned_text = response_text
@@ -69,15 +83,21 @@ async def tailor_resume_async(job: Job) -> dict:
         elif "professional_summary" in delta:
             tailored["professional_summary"] = delta["professional_summary"]
 
-        if "skills" in delta:
+        if "tailored_skills" in delta:
+            tailored["skills"] = delta["tailored_skills"]
+        elif "skills" in delta:
             tailored["skills"] = delta["skills"]
 
-        if "experience_details" in delta:
+        if "tailored_experience" in delta:
+            tailored["experience_details"] = delta["tailored_experience"]
+        elif "experience_details" in delta:
             tailored["experience_details"] = delta["experience_details"]
         elif "experience" in delta:
-            tailored["experience"] = delta["experience"]
+            tailored["experience_details"] = delta["experience"]
 
-        if "projects" in delta:
+        if "tailored_projects" in delta:
+            tailored["projects"] = delta["tailored_projects"]
+        elif "projects" in delta:
             tailored["projects"] = delta["projects"]
 
         return tailored
@@ -93,9 +113,50 @@ def tailor_resume(job: Job) -> dict:
 
 async def tailor_resumes_batch_async(jobs: list[Job]) -> list[dict]:
     import asyncio
-    tasks = [tailor_resume_async(job) for job in jobs]
-    return await asyncio.gather(*tasks, return_exceptions=True)
+    if not jobs:
+        return []
+        
+    # Cache Warming: Process first job sequentially to populate DeepSeek's prefix cache
+    first_result = await tailor_resume_async(jobs[0])
+    
+    if len(jobs) > 1:
+        tasks = [tailor_resume_async(job) for job in jobs[1:]]
+        rest_results = await asyncio.gather(*tasks, return_exceptions=True)
+        return [first_result] + list(rest_results)
+        
+    return [first_result]
 
 def tailor_resumes_batch(jobs: list[Job]) -> list[dict]:
     import asyncio
     return asyncio.run(tailor_resumes_batch_async(jobs))
+def tailor_resume_with_skills(job: Job, selected_skills: list[str]) -> str:
+    import asyncio
+    import os
+    import datetime
+    import shutil
+    from playwright.sync_api import sync_playwright
+    from src.pdf_generator import generate_pdf
+    
+    tailored_resume = asyncio.run(tailor_resume_async(job, selected_skills))
+    job.tailored_resume = tailored_resume
+    
+    date_str = datetime.datetime.now().strftime('%Y-%m-%d')
+    pdf_path = ''
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        try:
+            pdf_path = generate_pdf(job, tailored_resume, date_str, page)
+        finally:
+            browser.close()
+            
+    if pdf_path and os.path.exists(pdf_path):
+        manual_dir = os.path.join(os.getcwd(), 'output', 'manual')
+        if not os.path.exists(manual_dir):
+            os.makedirs(manual_dir)
+        filename = os.path.basename(pdf_path)
+        dest_path = os.path.join(manual_dir, filename)
+        shutil.copy2(pdf_path, dest_path)
+        return dest_path
+        
+    return ''

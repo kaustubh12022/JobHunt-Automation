@@ -3,10 +3,9 @@ import traceback
 from loguru import logger
 from src.scraper import run_scraper
 from src.scorer import score_jobs
-from src.sheet_generator import generate_final_sheet, get_human_date_str
+from src.config_loader import get_human_date_str
 from src.pdf_generator import generate_pdf
 from src.resume_tailor import tailor_resume
-from src.email_sender import deliver_daily_resumes
 from src.config_loader import load_config
 from pathlib import Path
 
@@ -57,7 +56,7 @@ def main():
         return
         
     config = load_config()
-    top_n = config['scoring'].get('top_n', 20)
+    top_n = 3 if test_mode else config['scoring'].get('top_n', 20)
     shortlisted = scored_jobs[:top_n]
     
     logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -67,7 +66,9 @@ def main():
     from src.resume_tailor import tailor_resumes_batch
     from playwright.sync_api import sync_playwright
     
-    date_str = get_human_date_str()
+    from datetime import datetime
+    time_format = datetime.now().strftime('%d%b-%H:%M').lower()
+    date_str = f"test/{time_format}" if test_mode else f"main pipeline/{time_format}"
     pdf_paths = []
     
     logger.info(f"   🧠 Firing {len(shortlisted)} tailoring requests to DeepSeek concurrently...")
@@ -112,9 +113,7 @@ def main():
                         
                     logger.info(f"   [{i+1}/{len(shortlisted)}] Generating PDF for: {job.title} at {job.company}")
                     try:
-                        short_id = str(uuid.uuid4())[:6]
-                        job.unique_id = short_id
-                        pdf_path = generate_pdf(job, tailored_data, f"{date_str}_{short_id}", page)
+                        pdf_path = generate_pdf(job, tailored_data, date_str, page)
                         pdf_paths.append(pdf_path)
                     except Exception as e:
                         logger.error(f"   ❌ PDF GENERATION FAILED for {job.company}: {type(e).__name__} - {e}")
@@ -130,36 +129,21 @@ def main():
             
     if not dry_run:
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        logger.info("PHASE 4/5: SAVING FINAL EXCEL SHEET")
+        logger.info("PHASE 4/4: SAVING TO DATABASE")
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         
         try:
-            path = generate_final_sheet(scored_jobs, pdf_paths=pdf_paths, test_mode=test_mode)
-        except Exception as e:
-            logger.error(f"❌ EXCEL GENERATION FAILED: {type(e).__name__} - {e}")
-            logger.error(f"💡 Hint: Check if the Excel file is open elsewhere or if Pandas/openpyxl crashed.")
-            logger.error(f"📋 Traceback: {traceback.format_exc()}")
-            return
-        
-        logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        logger.info("PHASE 5/5: ZIP & EMAIL DELIVERY")
-        logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        
-        try:
-            out_dir_path = Path(config['output']['desktop_path']) / config['output']['folder_name'] / date_str
-            
-            stats = {
-                "found_initial": scrape_stats.get("found_initial", len(jobs)),
-                "pandas_dropped": scrape_stats.get("pandas_dropped", 0),
-                "dedup_dropped": scrape_stats.get("dedup_dropped", 0),
-                "reached_scoring": scrape_stats.get("reached_scoring", len(jobs)),
-                "scored": len(scored_jobs),
-                "tailored": sum(1 for p in pdf_paths if p)
+            from src.db import save_pipeline_results
+            pipeline_state = {
+                "mode": "test" if test_mode else "prod",
+                "scan": {"total_found": len(jobs)},
+                "filter": {"after": scrape_stats.get("reached_scoring", len(jobs))},
+                "score": {"scored": len(scored_jobs), "shortlisted": len(shortlisted)}
             }
-            deliver_daily_resumes(str(out_dir_path), date_str, stats, shortlisted)
+            save_pipeline_results(pipeline_state, shortlisted, pdf_paths)
+            path = "Database (Supabase)"
         except Exception as e:
-            logger.error(f"❌ EMAIL DELIVERY FAILED: {type(e).__name__} - {e}")
-            logger.error(f"💡 Hint: Check SMTP settings, App Password, or ZIP file permissions.")
+            logger.error(f"❌ DATABASE SAVE FAILED: {type(e).__name__} - {e}")
             logger.error(f"📋 Traceback: {traceback.format_exc()}")
             return
     
@@ -171,7 +155,7 @@ def main():
     if not dry_run:
         logger.info(f"   Resumes Generated: {sum(1 for p in pdf_paths if p)}")
         if path:
-            logger.info(f"   Sheet saved to:   {path}")
+            logger.info(f"   Saved to:         {path}")
     else:
         logger.info(f"   🛡️ DRY RUN AUDIT SAVED TO: audit.log")
     logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")

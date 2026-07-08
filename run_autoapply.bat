@@ -1,12 +1,11 @@
 @echo off
-echo Waking up and starting AutoApply...
+echo Starting AutoApply Dashboard...
 
 :: 1. Navigate to your project folder
-cd "C:\Users\kalek\OneDrive\Desktop\AutoApply"
+cd "C:\Users\kalek\OneDrive\Desktop\Projects\AutoApply"
 
-:: 2. Run the main pipeline (which now includes email delivery)
-python run.py
+:: 2. Open dashboard in default browser
+start http://127.0.0.1:5000
 
-:: 3. Pipeline is completely finished (success or fail). Put the PC back to sleep.
-echo Pipeline complete. Suspending PC...
-rundll32.exe powrprof.dll,SetSuspendState 0,1,0
+:: 3. Run the Flask server
+python app.py

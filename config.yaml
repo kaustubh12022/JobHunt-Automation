@@ -6,7 +6,7 @@
 ai:
   provider: "deepseek"
   model: "deepseek-v4-flash"              # Single model for both scoring & tailoring
-  api_key: "YOUR_DEEPSEEK_API_KEY"
+  api_key: "sk-517864b14192450fb78dbc0bace07c70"
   temperature: 0.3
 
 # --- Job Search Settings ---
@@ -51,7 +51,7 @@ email:
   enabled: true
   sender: "kaustubh.kale.work@gmail.com"
   recipient: "kaustubh.kale.work@gmail.com"
-  app_password: "YOUR_GMAIL_APP_PASSWORD"
+  app_password: "llwj thkg mwnd gcjj"
 
 # --- Resume Settings ---
 resume:
