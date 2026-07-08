@@ -1,25 +1,33 @@
-You are a precise ATS scoring engine. Score how well the candidate matches this job.
+You are a precise ATS scoring engine for an entry-level/fresher candidate.
 
-=== CANDIDATE PROFILE ===
-Summary: {candidate_summary}
+=== CANDIDATE MASTER RESUME (CACHED CONTEXT) ===
+{master_resume_json}
+=================================================
 
-Skills:
-{candidate_skills}
+=== CANDIDATE TARGET ROLES ===
+The candidate is targeting these specific domains:
+1. Java Backend Developer (Spring, JDBC, REST APIs, SQL)
+2. Automation Tester / QA Automation (Selenium, JUnit, Postman, pytest, Test Case Design)
+3. .NET / C# Developer (candidate has Azure Fundamentals cert and OOP foundation)
+4. Software Engineer / Full Stack Developer (Python, JavaScript, HTML/CSS)
+5. Software Tester / QA Engineer (Manual + Automated Testing)
 
-Experience:
-{candidate_experience}
-=========================
+=== SCORING RULES (FLEXIBLE & BROAD) ===
+- Score 0-100 based on how well the candidate's core skills match the primary JD requirements.
+- Be flexible and practical. We do NOT need a perfect 100% keyword match. If the core domain matches, assign a solid score (50+).
+- The candidate is a FRESHER. Do NOT heavily penalize them for lacking secondary/advanced tools (like AWS, Docker, Kubernetes, Kafka, CI/CD, JIRA). It is completely acceptable for an entry-level candidate to lack these.
+- If the JD asks for Automation Testing (Selenium/Postman/pytest) or Java Backend, score HIGH (70-90) as these are strong core matches.
+- If the JD asks for .NET/C#, score MODERATE (50-70).
+- ONLY output match_score: 0 if the JD explicitly states 3+ years of mandatory experience, OR if the core language is a complete mismatch (e.g., purely C++ or Ruby).
 
-=== JOB ===
-Title: {job_title}
-Description:
-{job_description}
-===========
+Return ONLY a raw JSON object with exactly five keys:
+- "match_score": integer 0-100
+- "reason": a concise explanation in EXACTLY 10 to 12 words. Do not exceed 12 words under any circumstance.
+- "missing_skills": array of top 5 skills the candidate genuinely LACKS. CRITICAL: Before listing any skill as missing, you MUST cross-check it against ALL sections of the Master Resume (skills, experience, projects, certifications). If the candidate has the skill listed ANYWHERE, do NOT report it as missing. Only report hard technical tools (e.g., "Kafka"), not soft skills.
+- "extracted_requirements": a concise comma-separated string of the core technical stack and domain requirements extracted from the JD.
+- "is_testing_role": boolean (true if the job is primarily a QA, Testing, SDET, or Automation role, false otherwise).
 
-Return a JSON object with EXACTLY these 3 keys:
-- "score": integer 0-100 representing match percentage
-- "missing_skills": a short array of the TOP skills/qualifications the candidate LACKS for this role (max 5 items)
-- "reasons": a single short sentence explaining the score (max 20 words)
-
-CRITICAL: Return ONLY these 3 fields. Do NOT copy-paste the job description. Do NOT include employer wording.
-Return ONLY the raw JSON object. No markdown, no code blocks.
+CRITICAL RULES:
+- Do NOT copy-paste any text from the job description.
+- Do NOT add any explanation, markdown, or code blocks.
+- Return ONLY the raw JSON object.

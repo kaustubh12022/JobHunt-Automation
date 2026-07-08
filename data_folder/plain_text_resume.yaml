@@ -18,7 +18,7 @@ education_details:
   - education_level: "Bachelors of Engineering in Information Technology"
     institution: "SKNSITS, Lonavala"
     field_of_study: "Information Technology"
-    final_evaluation_grade: "7.40 CGPA"
+    final_evaluation_grade: "7.70 CGPA"
     start_date: "2022"
     year_of_completion: "2026"
 
@@ -68,6 +68,7 @@ skills:
   - "SQL"
   - "C# (Basics via Azure)"
   - "JavaScript"
+  - "TypeScript"
   - "HTML"
   - "CSS"
 

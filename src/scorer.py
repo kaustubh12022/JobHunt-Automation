@@ -65,7 +65,7 @@ def is_relevant_jd(description: str) -> bool:
 
 import asyncio
 
-def score_jobs(jobs: list[Job], test_mode=False) -> list[Job]:
+def score_jobs(jobs: list[Job], test_mode=False, callbacks=None) -> list[Job]:
     """
     Scores jobs using DeepSeek with thinking DISABLED.
     Uses asyncio to process all API calls concurrently.
@@ -85,6 +85,36 @@ def score_jobs(jobs: list[Job], test_mode=False) -> list[Job]:
 
     # The async scoring logic for a single job
     async def process_job(idx: int, job: Job):
+        job_id = job.id
+        if callbacks and "on_score_start" in callbacks:
+            callbacks["on_score_start"](job_id, job.title, job.company)
+
+        # Check JD Cache First
+        try:
+            from src.db import get_cached_jd_score, save_jd_cache
+            cached = get_cached_jd_score(job.url)
+            if cached:
+                job.score = cached.get('score', 0)
+                job.missing_skills = cached.get('missing_skills', [])
+                
+                raw_req = cached.get('extracted_requirements', '')
+                if '|||REASON|||' in raw_req:
+                    req_parts = raw_req.split('|||REASON|||')
+                    job.extracted_requirements = req_parts[0]
+                    job.reasons = req_parts[1]
+                else:
+                    job.extracted_requirements = raw_req
+                    job.reasons = ""
+                    
+                job.is_testing_role = cached.get('is_testing_role', False)
+                job.tokens_used = 0
+                logger.debug(f"   → [{idx+1}/{len(relevant_jobs)}] (CACHED) Score: {job.score}%")
+                if callbacks and "on_score_complete" in callbacks:
+                    callbacks["on_score_complete"](job_id, job.score, job.reasons)
+                return job
+        except Exception as ce:
+            logger.debug(f"Cache check failed: {ce}")
+
         stripped_desc = strip_boilerplate(job.description)
         user_prompt = (
             f"Score this candidate against the following job:\n\n"
@@ -96,7 +126,8 @@ def score_jobs(jobs: list[Job], test_mode=False) -> list[Job]:
 
         try:
             from src.ai_engine import call_ai_scoring_async
-            response_text = await call_ai_scoring_async(user_prompt)
+            response_text, tokens = await call_ai_scoring_async(user_prompt)
+            job.tokens_used = getattr(job, 'tokens_used', 0) + tokens
 
             start_idx = response_text.find('{')
             end_idx = response_text.rfind('}') + 1
@@ -108,22 +139,56 @@ def score_jobs(jobs: list[Job], test_mode=False) -> list[Job]:
 
             job.score = result.get("match_score", result.get("score", 0))
             job.missing_skills = result.get("missing_skills", [])
+            job.reasons = result.get("reason", "")
             
             # Phase 2 JD Compression: store extracted requirements on the job object
             job.extracted_requirements = result.get("extracted_requirements", "")
             job.is_testing_role = result.get("is_testing_role", False)
+            
+            # Save to Cache
+            try:
+                combined_req = f"{job.extracted_requirements}|||REASON|||{job.reasons}"
+                save_jd_cache(job.url, job.score, job.missing_skills, combined_req, job.is_testing_role)
+            except Exception as ce:
+                logger.debug(f"Save to cache failed: {ce}")
 
             logger.debug(f"   → [{idx+1}/{len(relevant_jobs)}] Score: {job.score}% | QA: {job.is_testing_role} | Missing: {', '.join(job.missing_skills[:3])}...")
+            
+            if callbacks and "on_score_complete" in callbacks:
+                callbacks["on_score_complete"](job_id, job.score, job.reasons)
+                
             return job
 
         except Exception as e:
             logger.error(f"   ❌ Error scoring job {job.company}: {e}")
+            if callbacks and "on_score_complete" in callbacks:
+                callbacks["on_score_complete"](job_id, 0, "")
             return None
 
-    # Run all jobs concurrently
+    # Run all jobs concurrently with Cache Warming
     async def run_all():
-        tasks = [process_job(i, job) for i, job in enumerate(relevant_jobs)]
-        return await asyncio.gather(*tasks, return_exceptions=True)
+        if not relevant_jobs:
+            return []
+            
+        results = []
+        cache_warmed = False
+        tasks = []
+        
+        for i, job in enumerate(relevant_jobs):
+            if not cache_warmed:
+                res = await process_job(i, job)
+                results.append(res)
+                # If tokens_used > 0, it hit the DeepSeek API and the prompt cache is now warm
+                if res and getattr(res, 'tokens_used', 0) > 0:
+                    cache_warmed = True
+            else:
+                tasks.append(process_job(i, job))
+                
+        if tasks:
+            rest_results = await asyncio.gather(*tasks, return_exceptions=True)
+            results.extend(rest_results)
+            
+        return results
 
     results = asyncio.run(run_all())
     

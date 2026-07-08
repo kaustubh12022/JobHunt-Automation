@@ -17,16 +17,16 @@ def generate_pdf(job: Job, tailored_resume: dict, date_str: str, page) -> str:
     out_dir_path = Path(config['output']['desktop_path']) / config['output']['folder_name'] / date_str
     out_dir_path.mkdir(parents=True, exist_ok=True)
 
-    # Get candidate name from master resume for filename
-    master = load_resume()
-    candidate_name = master.get('personal_information', {}).get('name', 'Candidate')
-    candidate_surname = master.get('personal_information', {}).get('surname', '')
-    full_name = f"{candidate_name}_{candidate_surname}" if candidate_surname else candidate_name
-
-    # Build filename: CompanyName_CandidateName_Resume.pdf
+    import re
+    # Build filename: JobTitle_CompanyName.pdf
+    safe_title = "".join([c if c.isalnum() else "_" for c in job.title]).strip("_")
     safe_company = "".join([c if c.isalnum() else "_" for c in job.company]).strip("_")
-    safe_name = "".join([c if c.isalnum() else "_" for c in full_name]).strip("_")
-    pdf_filename = f"{safe_company}_{safe_name}_Resume.pdf"
+    
+    # Remove duplicate underscores
+    safe_title = re.sub(r'_+', '_', safe_title)
+    safe_company = re.sub(r'_+', '_', safe_company)
+    
+    pdf_filename = f"{safe_title}_{safe_company}.pdf"
     pdf_path = out_dir_path / pdf_filename
 
     # Jinja2 setup
@@ -41,19 +41,21 @@ def generate_pdf(job: Job, tailored_resume: dict, date_str: str, page) -> str:
     try:
         page.set_content(html_out)
         
-        # Inject JavaScript to dynamically scale content to fit 1 page (A4 = 1122px height approx)
-        page.evaluate("""
-            const A4_HEIGHT_PX = 1100; // slightly under A4 to be safe
-            let scrollHeight = document.documentElement.scrollHeight;
-            if (scrollHeight > A4_HEIGHT_PX) {
-                let scaleFactor = A4_HEIGHT_PX / scrollHeight;
-                // Cap scaling at 0.85 to preserve readability
-                if (scaleFactor < 0.80) scaleFactor = 0.80; 
-                document.body.style.transform = `scale(${scaleFactor})`;
-                document.body.style.transformOrigin = 'top left';
-                document.body.style.width = `${100 / scaleFactor}%`;
-            }
-        """)
+        # Inject JavaScript to dynamically scale content if max_pages = 1
+        max_pages = config.get('resume', {}).get('max_pages', 1)
+        if max_pages == 1:
+            page.evaluate("""
+                const A4_HEIGHT_PX = 1100; // slightly under A4 to be safe
+                let scrollHeight = document.documentElement.scrollHeight;
+                if (scrollHeight > A4_HEIGHT_PX) {
+                    let scaleFactor = A4_HEIGHT_PX / scrollHeight;
+                    // Cap scaling at 0.85 to preserve readability
+                    if (scaleFactor < 0.80) scaleFactor = 0.80; 
+                    document.body.style.transform = `scale(${scaleFactor})`;
+                    document.body.style.transformOrigin = 'top left';
+                    document.body.style.width = `${100 / scaleFactor}%`;
+                }
+            """)
 
         page.pdf(
             path=str(pdf_path),

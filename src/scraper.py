@@ -31,7 +31,7 @@ def clean_html(desc: str) -> str:
     return desc.strip()
 
 
-def run_scraper(selected_platforms=None, test_mode=False) -> list[Job]:
+def run_scraper(selected_platforms=None, test_mode=False, callbacks=None) -> list[Job]:
     """
     Scrapes jobs using the Combinatorial Matrix strategy.
     
@@ -57,8 +57,9 @@ def run_scraper(selected_platforms=None, test_mode=False) -> list[Job]:
     ]
 
     if test_mode:
-        logger.info("🧪 TEST MODE: Scraping up to 5 combinations with 20 results each (max 100)")
-        combinations = combinations[:5]
+        logger.info("🧪 TEST MODE: Scraping 1 random combination with 20 results each")
+        random.shuffle(combinations)
+        combinations = combinations[:1]
         results_wanted = 20
     else:
         results_wanted = search_cfg.get('results_wanted', 20)
@@ -68,9 +69,9 @@ def run_scraper(selected_platforms=None, test_mode=False) -> list[Job]:
 
     platform_totals = {}
     for idx, (term, loc, jt) in enumerate(combinations):
+        cycle_label = f"Cycle {idx+1}/{total_combos}: {term} in {loc} ({jt})"
         logger.info(f"[{idx+1}/{total_combos}] 🔍 Scraping '{term}' in '{loc}' (type={jt}) from {', '.join(platforms)}...")
         
-        # Skip linkedin for internships
         effective_platforms = platforms.copy()
         if jt == "internship" and "linkedin" in effective_platforms:
             effective_platforms.remove("linkedin")
@@ -78,7 +79,18 @@ def run_scraper(selected_platforms=None, test_mode=False) -> list[Job]:
         if not effective_platforms:
             logger.info("   ℹ️ No valid platforms for this combination. Skipping.")
             continue
-
+            
+        if callbacks and "on_cycle_start" in callbacks:
+            callbacks["on_cycle_start"]({
+                "cycle": idx+1,
+                "total": total_combos,
+                "term": term,
+                "loc": loc,
+                "jt": jt,
+                "platforms": effective_platforms,
+                "cycle_label": cycle_label
+            })
+            
         try:
             scrape_kwargs = dict(
                 site_name=effective_platforms,
@@ -101,6 +113,16 @@ def run_scraper(selected_platforms=None, test_mode=False) -> list[Job]:
                     if count > 0:
                         logger.info(f"   ✅ {platform.capitalize()}: {count} jobs found")
                         platform_totals[platform] = platform_totals.get(platform, 0) + count
+                        
+                if callbacks and "on_job_scraped" in callbacks:
+                    for _, row in jobs_df.iterrows():
+                        callbacks["on_job_scraped"]({
+                            "title": str(row.get("title", "")),
+                            "company": str(row.get("company", "")),
+                            "platform": str(row.get("site", "")),
+                            "cycle": cycle_label
+                        })
+                        
                 all_dfs.append(jobs_df)
             else:
                 logger.info("   ℹ️ No jobs found for this combination.")
@@ -149,6 +171,9 @@ def run_scraper(selected_platforms=None, test_mode=False) -> list[Job]:
         stale_count = stale_mask.sum()
         if stale_count > 0:
             logger.info(f"   🕐 Dropped {stale_count} stale jobs (older than {search_cfg.get('hours_old', 24)}h)")
+            if callbacks and "on_job_dropped" in callbacks:
+                for _, row in combined_df[stale_mask].iterrows():
+                    callbacks["on_job_dropped"](row.get("title"), row.get("company"), "Stale (older than 24h)")
         combined_df = combined_df[~stale_mask | combined_df['date_posted'].isna()]
 
     # 3. Location Filter (Target cities OR Remote)
@@ -162,46 +187,55 @@ def run_scraper(selected_platforms=None, test_mode=False) -> list[Job]:
         dropped_loc = (~loc_mask).sum()
         if dropped_loc > 0:
             logger.info(f"   📍 Dropped {dropped_loc} jobs with mismatched locations (not in target cities or remote)")
+            if callbacks and "on_job_dropped" in callbacks:
+                for _, row in combined_df[~loc_mask].iterrows():
+                    callbacks["on_job_dropped"](row.get("title"), row.get("company"), "Location mismatch")
         combined_df = combined_df[loc_mask]
 
     # 4. Anti-Senior Title Filter
-    if 'title' in combined_df.columns:
-        senior_mask = combined_df['title'].str.contains(r'senior|sr[\.\s]|lead|manager|principal|director|head|vp|president|experienced|architect|staff|expert', case=False, na=False, regex=True)
-        dropped_df = combined_df[senior_mask]
-        dropped_senior = len(dropped_df)
-        combined_df = combined_df[~senior_mask]
-        if dropped_senior > 0:
-            logger.info(f"   🚫 Dropped {dropped_senior} senior-level jobs (title filter)")
-            for title in dropped_df['title']:
-                logger.info(f"      - Dropped title: {title}")
-
-    # 4.5 Experience Level Filter (Zero-Token Rule)
-    if 'description' in combined_df.columns:
-        def requires_3_plus_years(desc):
-            if not isinstance(desc, str): return False
-            desc_lower = desc.lower()
-            
-            # Catch digit-based experience: "3+ years", "3-5 yrs", "3 to 5 years", "3+ yrs"
-            digit_pattern = r'\b(\d+)\s*(?:\+|to|-|and)?\s*(?:\d+)?\s*(?:years?|yrs?)'
-            for m in re.findall(digit_pattern, desc_lower):
-                try:
-                    if 3 <= int(m) <= 25:
-                        return True
-                except: pass
+    if not test_mode:
+        if 'title' in combined_df.columns:
+            senior_mask = combined_df['title'].str.contains(r'senior|sr[\.\s]|lead|manager|principal|director|head|vp|president|experienced|architect|staff|expert', case=False, na=False, regex=True)
+            dropped_df = combined_df[senior_mask]
+            dropped_senior = len(dropped_df)
+            combined_df = combined_df[~senior_mask]
+            if dropped_senior > 0:
+                logger.info(f"   🚫 Dropped {dropped_senior} senior-level jobs (title filter)")
+                for _, row in dropped_df.iterrows():
+                    logger.info(f"      - Dropped title: {row['title']}")
+                    if callbacks and "on_job_dropped" in callbacks:
+                        callbacks["on_job_dropped"](row.get("title"), row.get("company"), "Senior title detected")
+    
+        # 4.5 Experience Level Filter (Zero-Token Rule)
+        if 'description' in combined_df.columns:
+            def requires_3_plus_years(desc):
+                if not isinstance(desc, str): return False
+                desc_lower = desc.lower()
                 
-            # Catch word-based experience: "three years", "five+ yrs"
-            words = ['three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve']
-            word_pattern = fr'\b({"|".join(words)})\s*(?:\+|to|-|and)?\s*(?:\w+)?\s*(?:years?|yrs?)'
-            if re.search(word_pattern, desc_lower):
-                return True
+                # Catch digit-based experience: "3+ years", "3-5 yrs", "3 to 5 years", "3+ yrs"
+                digit_pattern = r'\b(\d+)\s*(?:\+|to|-|and)?\s*(?:\d+)?\s*(?:years?|yrs?)'
+                for m in re.findall(digit_pattern, desc_lower):
+                    try:
+                        if 3 <= int(m) <= 25:
+                            return True
+                    except: pass
+                    
+                # Catch word-based experience: "three years", "five+ yrs"
+                words = ['three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve']
+                word_pattern = fr'\b({"|".join(words)})\s*(?:\+|to|-|and)?\s*(?:\w+)?\s*(?:years?|yrs?)'
+                if re.search(word_pattern, desc_lower):
+                    return True
+                    
+                return False
                 
-            return False
-            
-        exp_mask = combined_df['description'].apply(requires_3_plus_years)
-        dropped_exp = exp_mask.sum()
-        if dropped_exp > 0:
-            logger.info(f"   🚫 Dropped {dropped_exp} jobs requiring 3+ years of experience")
-        combined_df = combined_df[~exp_mask]
+            exp_mask = combined_df['description'].apply(requires_3_plus_years)
+            dropped_exp = exp_mask.sum()
+            if dropped_exp > 0:
+                logger.info(f"   🚫 Dropped {dropped_exp} jobs requiring 3+ years of experience")
+                if callbacks and "on_job_dropped" in callbacks:
+                    for _, row in combined_df[exp_mask].iterrows():
+                        callbacks["on_job_dropped"](row.get("title"), row.get("company"), "High experience required")
+            combined_df = combined_df[~exp_mask]
 
     # 5. Deduplicate (Job URL + Fallback to Title/Company)
     before_dedup = len(combined_df)
@@ -215,6 +249,7 @@ def run_scraper(selected_platforms=None, test_mode=False) -> list[Job]:
     dropped_dedup = before_dedup - len(combined_df)
     if dropped_dedup > 0:
         logger.info(f"   🔄 Dropped {dropped_dedup} duplicate jobs (cross-platform overlap)")
+        # Too many dedups to log individually typically, but we can emit a generic callback if needed.
 
     after_count = len(combined_df)
     logger.info(f"🧹 Pre-filter: {before_count} → {after_count} jobs ({before_count - after_count} dropped)")
@@ -227,7 +262,9 @@ def run_scraper(selected_platforms=None, test_mode=False) -> list[Job]:
         if not desc:
             continue
 
+        import uuid
         job = Job(
+            id=str(uuid.uuid4()),
             title=str(row.get("title", "Unknown Title")),
             company=str(row.get("company", "Unknown Company")),
             location=str(row.get("location", "Unknown Location")),

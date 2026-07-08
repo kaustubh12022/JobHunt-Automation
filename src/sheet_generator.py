@@ -5,12 +5,7 @@ from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 from datetime import datetime
 from src.logger import logger
 from src.models import Job
-from src.config_loader import load_config
-
-def get_human_date_str() -> str:
-    day = str(datetime.now().day)
-    month = datetime.now().strftime("%B")
-    return f"{day} {month}"
+from src.config_loader import load_config, get_human_date_str
 
 def generate_final_sheet(jobs: list[Job], pdf_paths: list[str] = None, test_mode: bool = False):
     if not jobs:

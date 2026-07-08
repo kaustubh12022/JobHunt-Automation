@@ -1,6 +1,12 @@
 import yaml
 from pathlib import Path
 
+from datetime import datetime
+
+def get_human_date_str() -> str:
+    """Return formatted date string (e.g., 2026-07-08) for folders and general usage."""
+    return datetime.now().strftime('%Y-%m-%d')
+
 def load_config() -> dict:
     """Load main configuration from config.yaml."""
     config_path = Path(__file__).parent.parent / "config.yaml"
