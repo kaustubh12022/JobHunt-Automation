@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ApplicationCard from './ApplicationCard';
 
 // Using lower-case statuses as per DB defaults, but displaying Title Case
@@ -12,11 +12,26 @@ const COLUMNS = [
   { id: 'rejected', label: 'Rejected' }
 ];
 
-export default function KanbanBoard({ applications, onStatusChange }) {
+export default function KanbanBoard({ applications, onStatusChange, onDeleteApp }) {
+  const [dragOverCol, setDragOverCol] = useState(null);
   const getAppsForColumn = (statusId) => applications.filter(app => app.status === statusId);
+
+  const handleDragOver = (e, colId) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverCol !== colId) setDragOverCol(colId);
+  };
+
+  const handleDragLeave = (e, colId) => {
+    // Only clear if we actually left the column (not entering a child)
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setDragOverCol(null);
+    }
+  };
 
   const handleDrop = (e, statusId) => {
     e.preventDefault();
+    setDragOverCol(null);
     const appId = e.dataTransfer.getData('applicationId');
     if (appId) {
       onStatusChange(appId, statusId);
@@ -30,8 +45,9 @@ export default function KanbanBoard({ applications, onStatusChange }) {
         return (
           <div 
             key={col.id} 
-            className="kanban-column"
-            onDragOver={e => e.preventDefault()}
+            className={`kanban-column ${dragOverCol === col.id ? 'drag-over' : ''}`}
+            onDragOver={e => handleDragOver(e, col.id)}
+            onDragLeave={e => handleDragLeave(e, col.id)}
             onDrop={e => handleDrop(e, col.id)}
           >
             <div className="kanban-column-header">
@@ -43,6 +59,7 @@ export default function KanbanBoard({ applications, onStatusChange }) {
                 key={app.id} 
                 app={app} 
                 onStatusChange={(newStatus) => onStatusChange(app.id, newStatus)}
+                onDeleteApp={() => onDeleteApp(app.id)}
                 columns={COLUMNS}
               />
             ))}

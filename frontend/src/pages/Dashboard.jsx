@@ -28,29 +28,171 @@ function AnimatedToggle({ active, onClick, label }) {
   );
 }
 
+function ModelSelect({ value, onChange, options, label }) {
+  return (
+    <div style={{ flex: 1 }}>
+      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        style={{
+          width: '100%',
+          padding: '10px 12px',
+          background: '#f8fafc',
+          border: '1px solid var(--border-color)',
+          borderRadius: '8px',
+          fontSize: '14px',
+          color: 'var(--text-main)',
+          cursor: 'pointer',
+          fontWeight: 500,
+          outline: 'none',
+          transition: 'border-color 0.2s',
+          appearance: 'auto',
+        }}
+      >
+        {options.map(opt => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 function IdleView({ onStart }) {
-  const [platforms, setPlatforms] = useState(['linkedin', 'indeed']);
+  const [platforms, setPlatforms] = useState(['linkedin', 'indeed', 'zip_recruiter', 'workday', 'jsonld']);
   const [testMode, setTestMode] = useState(false);
+  const [jobTypes, setJobTypes] = useState(['fulltime', 'internship']);
+  
+  // AI Model Settings
+  const [scoringModel, setScoringModel] = useState('deepseek-v4-flash');
+  const [scoringThinking, setScoringThinking] = useState(false);
+  const [tailoringModel, setTailoringModel] = useState('deepseek-v4-pro');
+  const [tailoringThinking, setTailoringThinking] = useState(true);
 
   const togglePlatform = (p) => {
     setPlatforms(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
   };
+  
+  const toggleJobType = (t) => {
+    setJobTypes(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
+  };
 
   return (
-    <div className="glass-panel" style={{ padding: '48px', maxWidth: '600px', margin: '40px auto', textAlign: 'center' }}>
+    <div className="glass-panel" style={{ padding: '48px', maxWidth: '680px', margin: '40px auto', textAlign: 'center' }}>
       <motion.div initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} style={{ marginBottom: '40px' }}>
         <h1 style={{ fontSize: '32px', margin: '0 0 8px', color: 'var(--text-main)', fontWeight: 700 }}>AutoApply Pipeline</h1>
         <p style={{ color: 'var(--text-muted)' }}>Configure your run parameters below</p>
       </motion.div>
       
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center', margin: '0 auto 48px' }}>
-        <AnimatedToggle active={platforms.includes('linkedin')} onClick={() => togglePlatform('linkedin')} label="LinkedIn" />
-        <AnimatedToggle active={platforms.includes('indeed')} onClick={() => togglePlatform('indeed')} label="Indeed" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center', margin: '0 auto 32px' }}>
+        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <AnimatedToggle active={platforms.includes('linkedin')} onClick={() => togglePlatform('linkedin')} label="LinkedIn" />
+            <AnimatedToggle active={platforms.includes('indeed')} onClick={() => togglePlatform('indeed')} label="Indeed" />
+            <AnimatedToggle active={platforms.includes('zip_recruiter')} onClick={() => togglePlatform('zip_recruiter')} label="ZipRecruiter" />
+            <AnimatedToggle active={platforms.includes('workday')} onClick={() => togglePlatform('workday')} label="Workday" />
+            <AnimatedToggle active={platforms.includes('jsonld')} onClick={() => togglePlatform('jsonld')} label="JSON-LD" />
+        </div>
+        
         <div style={{ width: '100%', height: '1px', background: 'var(--border-color)', margin: '10px 0' }} />
-        <AnimatedToggle active={testMode} onClick={() => setTestMode(!testMode)} label="Test Mode (Fast run)" />
+        
+        <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <AnimatedToggle active={jobTypes.includes('fulltime')} onClick={() => toggleJobType('fulltime')} label="Full-Time" />
+            <AnimatedToggle active={jobTypes.includes('internship')} onClick={() => toggleJobType('internship')} label="Internships" />
+        </div>
+        
+        <div style={{ width: '100%', height: '1px', background: 'var(--border-color)', margin: '10px 0' }} />
+        <AnimatedToggle active={testMode} onClick={() => setTestMode(!testMode)} label="Test Mode (1 module cycle, top 3 resumes)" />
       </div>
 
-      <button className="btn-primary" onClick={() => onStart(platforms, testMode)} style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+      {/* AI Model Configuration */}
+      <div style={{ 
+        textAlign: 'left', 
+        background: '#f8fafc', 
+        borderRadius: '16px', 
+        padding: '24px', 
+        marginBottom: '32px',
+        border: '1px solid var(--border-color)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+          <BrainCircuit size={18} color="var(--primary)" />
+          <span style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-main)' }}>AI Model Configuration</span>
+        </div>
+        
+        {/* Scoring Settings */}
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--primary)', display: 'inline-block' }} />
+            AI Scoring
+          </div>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end' }}>
+            <ModelSelect 
+              label="Model"
+              value={scoringModel}
+              onChange={setScoringModel}
+              options={[
+                { value: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash' },
+              ]}
+            />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Thinking</div>
+              <div 
+                onClick={() => setScoringThinking(!scoringThinking)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '10px', 
+                  padding: '10px 12px', background: '#fff', border: '1px solid var(--border-color)', 
+                  borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s'
+                }}
+              >
+                <div className={`toggle-switch ${scoringThinking ? 'active' : ''}`} style={{ transform: 'scale(0.8)' }}>
+                  <div className="toggle-knob" />
+                </div>
+                <span style={{ fontSize: '14px', fontWeight: 500, color: scoringThinking ? 'var(--primary)' : 'var(--text-muted)' }}>
+                  {scoringThinking ? 'Enabled' : 'Disabled'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tailoring Settings */}
+        <div>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)', display: 'inline-block' }} />
+            Resume Tailoring
+          </div>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end' }}>
+            <ModelSelect 
+              label="Model"
+              value={tailoringModel}
+              onChange={setTailoringModel}
+              options={[
+                { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro' },
+                { value: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash' },
+              ]}
+            />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Thinking</div>
+              <div 
+                onClick={() => setTailoringThinking(!tailoringThinking)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '10px 12px', background: '#fff', border: '1px solid var(--border-color)',
+                  borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s'
+                }}
+              >
+                <div className={`toggle-switch ${tailoringThinking ? 'active' : ''}`} style={{ transform: 'scale(0.8)' }}>
+                  <div className="toggle-knob" />
+                </div>
+                <span style={{ fontSize: '14px', fontWeight: 500, color: tailoringThinking ? 'var(--success)' : 'var(--text-muted)' }}>
+                  {tailoringThinking ? 'Enabled' : 'Disabled'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button className="btn-primary" onClick={() => onStart(platforms, testMode, { scoringModel, scoringThinking, tailoringModel, tailoringThinking }, jobTypes)} style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
         <Play size={20} fill="currentColor" /> Start Pipeline
       </button>
     </div>
@@ -468,14 +610,22 @@ export default function Dashboard() {
     return () => eventSource.close();
   }, []);
 
-  const handleStart = async (platforms, testMode) => {
+  const handleStart = async (platforms, testMode, aiSettings = {}, jobTypes = ['fulltime', 'internship']) => {
     try {
       setError('');
       const endpoint = testMode ? '/api/test-start' : '/api/start';
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ platforms, dry_run: false }),
+        body: JSON.stringify({ 
+          platforms, 
+          job_types: jobTypes,
+          dry_run: false,
+          scoring_model: aiSettings.scoringModel,
+          scoring_thinking: aiSettings.scoringThinking,
+          tailoring_model: aiSettings.tailoringModel,
+          tailoring_thinking: aiSettings.tailoringThinking,
+        }),
       });
       if (!res.ok) {
         const data = await res.json();

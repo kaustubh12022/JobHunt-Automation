@@ -225,7 +225,7 @@ export default function ManualTailor() {
                   
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
                     {scoreData.missing_skills?.map((skill, idx) => (
-                      <motion.label key={idx} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: selectedSkills.includes(skill) ? 'rgba(34, 211, 238, 0.1)' : 'rgba(0,0,0,0.2)', padding: '16px', borderRadius: '12px', cursor: 'pointer', border: selectedSkills.includes(skill) ? '1px solid var(--cyan)' : '1px solid rgba(255,255,255,0.05)', transition: 'all 0.2s' }}>
+                      <motion.label key={idx} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => handleSkillToggle(skill)} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: selectedSkills.includes(skill) ? 'rgba(34, 211, 238, 0.1)' : 'rgba(0,0,0,0.2)', padding: '16px', borderRadius: '12px', cursor: 'pointer', border: selectedSkills.includes(skill) ? '1px solid var(--cyan)' : '1px solid rgba(255,255,255,0.05)', transition: 'all 0.2s' }}>
                         <div style={{ width: '20px', height: '20px', borderRadius: '6px', border: selectedSkills.includes(skill) ? 'none' : '2px solid var(--text-muted)', background: selectedSkills.includes(skill) ? 'var(--cyan)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           {selectedSkills.includes(skill) && <Check size={14} color="#000" strokeWidth={3} />}
                         </div>

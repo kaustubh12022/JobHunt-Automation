@@ -37,7 +37,7 @@ def deliver_daily_resumes(output_folder: str, date_str: str, stats: dict = None,
 
     sender_email = email_cfg.get('sender')
     recipient_email = email_cfg.get('recipient')
-    app_password = email_cfg.get('app_password')
+    app_password = os.environ.get("GMAIL_APP_PASSWORD") or email_cfg.get('app_password')
 
     if not sender_email or not recipient_email or not app_password or app_password == "YOUR_16_CHAR_APP_PASSWORD":
         logger.warning("⚠️ Email is enabled but credentials are not configured properly. Skipping.")

@@ -10,7 +10,8 @@ export default function Tracker() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [dateFilter, setDateFilter] = useState('');
-  const [newRunData, setNewRunData] = useState(null);
+  const [platformFilter, setPlatformFilter] = useState('');
+  const [jobTypeFilter, setJobTypeFilter] = useState('');
 
   useEffect(() => {
     fetchRuns();
@@ -40,22 +41,11 @@ export default function Tracker() {
     
     if (!error && data) {
       setRuns(data);
-      if (data.length > 0) {
-        const latestRun = data[0];
-        
-        // Notification logic
-        const lastSeen = localStorage.getItem('last_seen_run');
-        if (lastSeen !== latestRun.id) {
-          const { data: jobs } = await supabase.from('tracked_jobs').select('title, company, score').eq('run_id', latestRun.id);
-          setNewRunData({ ...latestRun, jobs: jobs || [] });
-        }
-
-        if (selectedRunId === 'all') {
-          // By default, select the most recent run for today if we just loaded
-          const today = new Date().toISOString().split('T')[0];
-          if (latestRun.started_at.startsWith(today)) {
-            setSelectedRunId(latestRun.id);
-          }
+      if (selectedRunId === 'all' && data.length > 0) {
+        // By default, find the most recent 'prod' run
+        const latestProdRun = data.find(r => r.mode === 'prod');
+        if (latestProdRun) {
+          setSelectedRunId(latestProdRun.id);
         }
       }
     }
@@ -75,6 +65,7 @@ export default function Tracker() {
           company,
           score,
           source,
+          job_type,
           url,
           missing_skills,
           pdf_filename,
@@ -110,6 +101,22 @@ export default function Tracker() {
       } else {
         const err = await res.json();
         alert("Failed to delete run: " + err.error);
+      }
+    } catch (e) {
+      console.error("Delete failed", e);
+    }
+  };
+
+  const handleDeleteApp = async (appId) => {
+    if (!window.confirm("Are you sure you want to permanently delete this application?")) return;
+    
+    try {
+      const res = await fetch(`/api/applications/${appId}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchApplications();
+      } else {
+        const err = await res.json();
+        alert("Failed to delete application: " + err.error);
       }
     } catch (e) {
       console.error("Delete failed", e);
@@ -162,90 +169,55 @@ export default function Tracker() {
       if (createdDate !== dateFilter) return false;
     }
     
+    // Platform filter
+    if (platformFilter) {
+      const src = job.source?.toLowerCase() || '';
+      if (platformFilter === 'workday' && !src.startsWith('workday')) return false;
+      if (platformFilter !== 'workday' && src !== platformFilter) return false;
+    }
+    
+    // Job Type filter
+    if (jobTypeFilter) {
+      const jt = job.job_type || 'fulltime';
+      if (jt !== jobTypeFilter) return false;
+    }
+    
     return true;
   });
 
-  const dismissNotification = () => {
-    if (newRunData) {
-      localStorage.setItem('last_seen_run', newRunData.id);
-      setNewRunData(null);
-    }
-  };
-
   return (
     <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto', position: 'relative' }}>
-      {/* NEW RUN NOTIFICATION MODAL */}
-      {newRunData && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', maxWidth: '500px', width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-            <h2 style={{ margin: '0 0 16px', color: '#16a34a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              🎉 Pipeline Completed!
-            </h2>
-            <p style={{ margin: '0 0 24px', color: '#64748b' }}>Here are the results from your most recent run:</p>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-              <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#334155' }}>{newRunData.jobs_scraped}</div>
-                <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Jobs Scraped</div>
-              </div>
-              <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#334155' }}>{newRunData.jobs_scored}</div>
-                <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>AI Scored</div>
-              </div>
-              <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#16a34a' }}>{newRunData.jobs_shortlisted}</div>
-                <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Shortlisted</div>
-              </div>
-              <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#2563eb' }}>{newRunData.resumes_generated}</div>
-                <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Resumes Gen</div>
-              </div>
-            </div>
-
-            {newRunData.jobs && newRunData.jobs.length > 0 && (
-              <div style={{ marginBottom: '24px' }}>
-                <h4 style={{ margin: '0 0 8px', color: '#334155' }}>Shortlisted Matches:</h4>
-                <ul style={{ margin: 0, paddingLeft: '20px', color: '#475569', fontSize: '14px' }}>
-                  {newRunData.jobs.filter(j => j.score >= 50).map((j, i) => (
-                    <li key={i} style={{ marginBottom: '4px' }}>
-                      <strong>{j.company}</strong> ({j.title}) <span style={{ color: '#16a34a', fontWeight: 'bold' }}>{j.score}%</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <button onClick={dismissNotification} style={{ width: '100%', padding: '12px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-              Awesome, let's view them!
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <h1 style={{ fontSize: '24px', fontWeight: 700, margin: 0 }}>Application Tracker</h1>
         
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-          <select 
-            value={selectedRunId} 
-            onChange={e => setSelectedRunId(e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-panel)' }}
-          >
-            <option value="all">All Pipeline Runs</option>
-            {runs.map(r => (
-              <option key={r.id} value={r.id}>
-                {new Date(r.started_at).toLocaleString()} ({r.mode.toUpperCase()}) - {r.jobs_shortlisted} Resumes
-              </option>
-            ))}
-          </select>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <select 
+              value={selectedRunId} 
+              onChange={e => setSelectedRunId(e.target.value)}
+              style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-panel)' }}
+            >
+              <option value="all">All Pipeline Runs</option>
+              {runs.map(r => (
+                <option key={r.id} value={r.id}>
+                  {new Date(r.started_at).toLocaleString()} ({r.mode.toUpperCase()}) - {r.jobs_shortlisted} Resumes
+                </option>
+              ))}
+            </select>
+            
+            {selectedRunId !== 'all' && (
+              <button className="btn-danger" onClick={handleDeleteRun}>
+                Delete Run
+              </button>
+            )}
+          </div>
           
-          {selectedRunId !== 'all' && (
-            <button className="btn-danger" onClick={handleDeleteRun}>
-              Delete Run
-            </button>
-          )}
-
-          <FilterBar search={search} onSearchChange={setSearch} dateFilter={dateFilter} onDateChange={setDateFilter} />
+          <FilterBar 
+            search={search} onSearchChange={setSearch} 
+            dateFilter={dateFilter} onDateChange={setDateFilter} 
+            platformFilter={platformFilter} onPlatformChange={setPlatformFilter}
+            jobTypeFilter={jobTypeFilter} onJobTypeChange={setJobTypeFilter}
+          />
         </div>
       </div>
       
@@ -254,7 +226,7 @@ export default function Tracker() {
           Loading your applications...
         </div>
       ) : (
-        <KanbanBoard applications={filteredApps} onStatusChange={handleStatusChange} />
+        <KanbanBoard applications={filteredApps} onStatusChange={handleStatusChange} onDeleteApp={handleDeleteApp} />
       )}
     </div>
   );

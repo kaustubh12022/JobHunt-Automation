@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS tracked_jobs (
     location TEXT,
     description TEXT,
     url TEXT,
-    source TEXT,                               -- linkedin | indeed
+    source TEXT,                               -- linkedin | indeed | glassdoor | workday, etc.
+    job_type TEXT DEFAULT 'fulltime',          -- fulltime | internship
     score INT,
     missing_skills TEXT[],
     extracted_requirements TEXT,

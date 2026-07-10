@@ -1,7 +1,11 @@
 import psycopg2
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Supabase direct connection string
-DATABASE_URL = "postgresql://postgres:Kaustubh%401202@db.hysfjbecwcljddszcjui.supabase.co:5432/postgres"
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
 # SQL from the implementation plan
 SQL = """

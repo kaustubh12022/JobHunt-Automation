@@ -1,25 +1,43 @@
 """
-AutoApply Scraper — Combinatorial Matrix + Pandas Pre-Filter Layer.
+AutoApply Scraper — Unified Pipeline.
 
 Architecture Rules:
-- Boolean search queries for entry-level targeting
-- Full page pulls (results_wanted=20 per combo)
-- Anti-ban delays: time.sleep(random.uniform(5, 12))
-- Pandas Pre-Filter: drop senior titles, null descriptions, misaligned locations
-- Deduplication by job_url
-- Full raw JD preserved in the Job object (never truncated)
+- Scrape Jobs from JobSpy, Workday, and JSON-LD.
+- Full-Time and Internship jobs processed in separate blocks.
+- Pandas Pre-Filter: strict 24-hour freshness, location bounds, anti-senior filter.
+- Deduplication by job_url.
+- Full raw JD preserved in the Job object.
 """
 import time
 import random
 import re
 import pandas as pd
+import uuid
+import time
 from jobspy import scrape_jobs
+
+def _scrape_with_retry(kwargs: dict, max_retries: int = 3, backoff: float = 5.0):
+    """Call scrape_jobs with retry on transient failures."""
+    for attempt in range(max_retries + 1):
+        try:
+            return scrape_jobs(**kwargs)
+        except Exception as e:
+            err = str(e).lower()
+            transient = any(k in err for k in ("timeout", "429", "proxy", "connection", "reset", "refused", "error encountered"))
+            if transient and attempt < max_retries:
+                wait = backoff * (attempt + 1)
+                logger.warning(f"Retry {attempt + 1}/{max_retries} for {kwargs.get('site_name')} in {wait}s: {e}")
+                time.sleep(wait)
+            else:
+                logger.error(f"JobSpy Error for {kwargs.get('site_name')}: {e}")
+                import pandas as pd
+                return pd.DataFrame()
+
 from src.logger import logger
 from src.models import Job
 from src.config_loader import load_config
-
-
-# ── Regex for senior-level title filtering is embedded in the run_scraper directly ──
+from src.scrapers.workday import scrape_workday
+from src.scrapers.jsonld import scrape_jsonld
 
 
 def clean_html(desc: str) -> str:
@@ -31,150 +49,51 @@ def clean_html(desc: str) -> str:
     return desc.strip()
 
 
-def run_scraper(selected_platforms=None, test_mode=False, callbacks=None) -> list[Job]:
-    """
-    Scrapes jobs using the Combinatorial Matrix strategy.
-    
-    Production: Runs all (search_term × location × job_type) combos.
-    Test Mode:  Runs 1 combo with 5 results max.
-    """
-    config = load_config()
-    search_cfg = config.get('search', {})
-
-    search_terms = search_cfg.get('search_terms', ['"Java Developer" AND (Intern OR Fresher)'])
-    locations = search_cfg.get('locations', ["Pune"])
-    job_types = search_cfg.get('job_types', ["fulltime", "internship"])
-    proxies = search_cfg.get('proxies', [])
-
-    platforms = selected_platforms if selected_platforms else search_cfg.get('platforms', ["linkedin", "indeed"])
-
-    # Build the combinatorial matrix
-    combinations = [
-        (term, loc, jt)
-        for term in search_terms
-        for loc in locations
-        for jt in job_types
-    ]
-
-    if test_mode:
-        logger.info("🧪 TEST MODE: Scraping 1 random combination with 20 results each")
-        random.shuffle(combinations)
-        combinations = combinations[:1]
-        results_wanted = 20
-    else:
-        results_wanted = search_cfg.get('results_wanted', 20)
-
-    total_combos = len(combinations)
-    all_dfs = []
-
-    platform_totals = {}
-    for idx, (term, loc, jt) in enumerate(combinations):
-        cycle_label = f"Cycle {idx+1}/{total_combos}: {term} in {loc} ({jt})"
-        logger.info(f"[{idx+1}/{total_combos}] 🔍 Scraping '{term}' in '{loc}' (type={jt}) from {', '.join(platforms)}...")
+def apply_pandas_filter(jobs: list[Job], locations: list[str], callbacks=None, test_mode=False) -> list[Job]:
+    """Applies the strict 24-hour freshness, location, and anti-senior filters."""
+    if not jobs:
+        return []
         
-        effective_platforms = platforms.copy()
-        if jt == "internship" and "linkedin" in effective_platforms:
-            effective_platforms.remove("linkedin")
-            
-        if not effective_platforms:
-            logger.info("   ℹ️ No valid platforms for this combination. Skipping.")
-            continue
-            
-        if callbacks and "on_cycle_start" in callbacks:
-            callbacks["on_cycle_start"]({
-                "cycle": idx+1,
-                "total": total_combos,
-                "term": term,
-                "loc": loc,
-                "jt": jt,
-                "platforms": effective_platforms,
-                "cycle_label": cycle_label
-            })
-            
-        try:
-            scrape_kwargs = dict(
-                site_name=effective_platforms,
-                search_term=term,
-                location=loc,
-                job_type=jt,
-                results_wanted=results_wanted,
-                hours_old=search_cfg.get('hours_old', 24),
-                country_indeed=search_cfg.get('country_indeed', 'India'),
-                linkedin_fetch_description=True,
-            )
-            if proxies:
-                scrape_kwargs['proxies'] = proxies
-
-            jobs_df = scrape_jobs(**scrape_kwargs)
-
-            if not jobs_df.empty:
-                for platform in effective_platforms:
-                    count = len(jobs_df[jobs_df['site'] == platform])
-                    if count > 0:
-                        logger.info(f"   ✅ {platform.capitalize()}: {count} jobs found")
-                        platform_totals[platform] = platform_totals.get(platform, 0) + count
-                        
-                if callbacks and "on_job_scraped" in callbacks:
-                    for _, row in jobs_df.iterrows():
-                        callbacks["on_job_scraped"]({
-                            "title": str(row.get("title", "")),
-                            "company": str(row.get("company", "")),
-                            "platform": str(row.get("site", "")),
-                            "cycle": cycle_label
-                        })
-                        
-                all_dfs.append(jobs_df)
-            else:
-                logger.info("   ℹ️ No jobs found for this combination.")
-
-        except Exception as e:
-            logger.error(f"   ❌ Error scraping combo '{term}' + '{loc}': {e}")
-
-        # Anti-ban delay (skip after last combo)
-        if idx < total_combos - 1:
-            delay = random.uniform(5.0, 12.0)
-            logger.info(f"⏳ Waiting {delay:.1f}s before next search...")
-            time.sleep(delay)
-
-    if not all_dfs:
-        logger.warning("⚠️ No jobs found matching your criteria.")
-        return [], {}
-
-    for p in platforms:
-        total = platform_totals.get(p, 0)
-        if total == 0:
-            logger.warning(f"⚠️ {p.capitalize()} returned 0 jobs across all combos — possible IP block or site issue")
-        else:
-            logger.info(f"   📊 {p.capitalize()}: {total} total raw jobs")
-
-    # ── Merge all DataFrames ──
-    combined_df = pd.concat(all_dfs, ignore_index=True)
-    logger.info(f"📊 Raw jobs scraped (before filtering): {len(combined_df)}")
-
-    # ══════════════════════════════════════════════
-    # PANDAS PRE-FILTER LAYER (Zero-Token Cost)
-    # ══════════════════════════════════════════════
+    # Convert list of Job objects to DataFrame for filtering
+    data = []
+    for j in jobs:
+        data.append({
+            "id": j.id,
+            "title": j.title,
+            "company": j.company,
+            "location": j.location,
+            "description": j.description,
+            "url": j.url,
+            "source": j.source,
+            "job_type": getattr(j, "job_type", "fulltime"),
+            "date_posted": getattr(j, "date_posted", pd.Timestamp.now(tz="UTC")), # Default to now for api scrapers if missing
+            "is_remote": getattr(j, "is_remote", False)
+        })
+    
+    combined_df = pd.DataFrame(data)
     before_count = len(combined_df)
-
+    
     # 1. Drop null/empty descriptions
     combined_df = combined_df.dropna(subset=['description'])
     combined_df = combined_df[combined_df['description'].str.strip().astype(bool)]
 
-    # 2. Recency Safety Net (Hard filter > 24h)
+    # 2. Recency Safety Net (Hard filter: STRICTLY 24h only)
     if 'date_posted' in combined_df.columns:
-        combined_df['date_posted'] = pd.to_datetime(combined_df['date_posted'], errors='coerce')
-        cutoff = pd.Timestamp.now(tz='UTC') - pd.Timedelta(hours=search_cfg.get('hours_old', 24))
-        # Ensure timezone info matches
-        if combined_df['date_posted'].dt.tz is None:
-            combined_df['date_posted'] = combined_df['date_posted'].dt.tz_localize('UTC')
+        combined_df['date_posted'] = pd.to_datetime(combined_df['date_posted'], errors='coerce', utc=True)
+        no_date_mask = combined_df['date_posted'].isna()
+        combined_df = combined_df[~no_date_mask]
+        
+        # Hard 24-hour cutoff
+        cutoff = pd.Timestamp.now(tz='UTC') - pd.Timedelta(hours=24)
         stale_mask = combined_df['date_posted'] < cutoff
+        
         stale_count = stale_mask.sum()
         if stale_count > 0:
-            logger.info(f"   🕐 Dropped {stale_count} stale jobs (older than {search_cfg.get('hours_old', 24)}h)")
+            logger.info(f"   🕐 Dropped {stale_count} stale jobs (older than 24h)")
             if callbacks and "on_job_dropped" in callbacks:
                 for _, row in combined_df[stale_mask].iterrows():
                     callbacks["on_job_dropped"](row.get("title"), row.get("company"), "Stale (older than 24h)")
-        combined_df = combined_df[~stale_mask | combined_df['date_posted'].isna()]
+        combined_df = combined_df[~stale_mask]
 
     # 3. Location Filter (Target cities OR Remote)
     if 'location' in combined_df.columns and locations:
@@ -192,7 +111,7 @@ def run_scraper(selected_platforms=None, test_mode=False, callbacks=None) -> lis
                     callbacks["on_job_dropped"](row.get("title"), row.get("company"), "Location mismatch")
         combined_df = combined_df[loc_mask]
 
-    # 4. Anti-Senior Title Filter
+    # 4. Anti-Senior Title Filter & Experience Filter
     if not test_mode:
         if 'title' in combined_df.columns:
             senior_mask = combined_df['title'].str.contains(r'senior|sr[\.\s]|lead|manager|principal|director|head|vp|president|experienced|architect|staff|expert', case=False, na=False, regex=True)
@@ -202,36 +121,33 @@ def run_scraper(selected_platforms=None, test_mode=False, callbacks=None) -> lis
             if dropped_senior > 0:
                 logger.info(f"   🚫 Dropped {dropped_senior} senior-level jobs (title filter)")
                 for _, row in dropped_df.iterrows():
-                    logger.info(f"      - Dropped title: {row['title']}")
                     if callbacks and "on_job_dropped" in callbacks:
                         callbacks["on_job_dropped"](row.get("title"), row.get("company"), "Senior title detected")
     
-        # 4.5 Experience Level Filter (Zero-Token Rule)
         if 'description' in combined_df.columns:
             def requires_3_plus_years(desc):
                 if not isinstance(desc, str): return False
                 desc_lower = desc.lower()
-                
-                # Catch digit-based experience: "3+ years", "3-5 yrs", "3 to 5 years", "3+ yrs"
                 digit_pattern = r'\b(\d+)\s*(?:\+|to|-|and)?\s*(?:\d+)?\s*(?:years?|yrs?)'
                 for m in re.findall(digit_pattern, desc_lower):
                     try:
                         if 3 <= int(m) <= 25:
                             return True
                     except: pass
-                    
-                # Catch word-based experience: "three years", "five+ yrs"
                 words = ['three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve']
                 word_pattern = fr'\b({"|".join(words)})\s*(?:\+|to|-|and)?\s*(?:\w+)?\s*(?:years?|yrs?)'
                 if re.search(word_pattern, desc_lower):
                     return True
-                    
                 return False
                 
-            exp_mask = combined_df['description'].apply(requires_3_plus_years)
+            # Filter experience only for fulltime jobs, bypass for internships
+            fulltime_mask = combined_df['job_type'] == 'fulltime'
+            exp_mask = pd.Series(False, index=combined_df.index)
+            exp_mask[fulltime_mask] = combined_df.loc[fulltime_mask, 'description'].apply(requires_3_plus_years)
+            
             dropped_exp = exp_mask.sum()
             if dropped_exp > 0:
-                logger.info(f"   🚫 Dropped {dropped_exp} jobs requiring 3+ years of experience")
+                logger.info(f"   🚫 Dropped {dropped_exp} fulltime jobs requiring 3+ years of experience")
                 if callbacks and "on_job_dropped" in callbacks:
                     for _, row in combined_df[exp_mask].iterrows():
                         callbacks["on_job_dropped"](row.get("title"), row.get("company"), "High experience required")
@@ -239,7 +155,7 @@ def run_scraper(selected_platforms=None, test_mode=False, callbacks=None) -> lis
 
     # 5. Deduplicate (Job URL + Fallback to Title/Company)
     before_dedup = len(combined_df)
-    url_col = 'job_url' if 'job_url' in combined_df.columns else 'url'
+    url_col = 'url'
     if url_col in combined_df.columns:
         combined_df = combined_df.drop_duplicates(subset=[url_col], keep='first')
         
@@ -249,40 +165,166 @@ def run_scraper(selected_platforms=None, test_mode=False, callbacks=None) -> lis
     dropped_dedup = before_dedup - len(combined_df)
     if dropped_dedup > 0:
         logger.info(f"   🔄 Dropped {dropped_dedup} duplicate jobs (cross-platform overlap)")
-        # Too many dedups to log individually typically, but we can emit a generic callback if needed.
 
     after_count = len(combined_df)
     logger.info(f"🧹 Pre-filter: {before_count} → {after_count} jobs ({before_count - after_count} dropped)")
-
-
-    # ── Convert to Job models ──
-    final_jobs = []
+    
+    # Convert back to Job objects
+    filtered_jobs = []
     for _, row in combined_df.iterrows():
-        desc = clean_html(row.get("description", ""))
-        if not desc:
-            continue
-
-        import uuid
         job = Job(
-            id=str(uuid.uuid4()),
-            title=str(row.get("title", "Unknown Title")),
-            company=str(row.get("company", "Unknown Company")),
-            location=str(row.get("location", "Unknown Location")),
-            description=desc,  # Full raw JD preserved (never truncated)
-            url=str(row.get("job_url", row.get("url", ""))),
-            source=str(row.get("site", "Unknown"))
+            id=str(row.get("id")),
+            title=str(row.get("title")),
+            company=str(row.get("company")),
+            location=str(row.get("location")),
+            description=str(row.get("description")),
+            url=str(row.get("url")),
+            source=str(row.get("source")),
+            job_type=str(row.get("job_type"))
         )
-        final_jobs.append(job)
+        # Preserve original date_posted if needed, but not part of model right now
+        filtered_jobs.append(job)
+        
+    return filtered_jobs
 
-    if test_mode:
-        final_jobs = final_jobs[:20]
 
+def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=False, callbacks=None) -> list[Job]:
+    """
+    Scrapes jobs from all sources, handling Full-Time and Internship blocks separately.
+    """
+    config = load_config()
+    search_cfg = config.get('search', {})
+
+    search_terms = search_cfg.get('search_terms', ['"Java Developer"'])
+    locations = search_cfg.get('locations', ["Pune"])
+    job_types = selected_job_types if selected_job_types else search_cfg.get('job_types', ["fulltime", "internship"])
+    proxies = search_cfg.get('proxies', [])
+    hours_old = search_cfg.get('hours_old', 24)
+
+    platforms = selected_platforms if selected_platforms else search_cfg.get('platforms', ["linkedin", "indeed"])
+    
+    results_wanted = 5 if test_mode else search_cfg.get('results_wanted', 20)
+    
+    all_raw_jobs = []
+    
+    for jt in job_types:
+        logger.info(f"🚀 Starting collection block for Job Type: {jt.upper()}")
+        
+        # 1. JobSpy Module
+        jobspy_platforms = [p for p in platforms if p not in ["workday", "jsonld"]]
+        if jt == "internship" and "linkedin" in jobspy_platforms:
+            jobspy_platforms.remove("linkedin")
+            
+        combinations = [(term, loc) for term in search_terms for loc in locations]
+        if test_mode:
+            random.shuffle(combinations)
+            combinations = combinations[:1]
+            
+        for term, loc in combinations:
+            cycle_label = f"JobSpy: {term} in {loc} ({jt})"
+            
+            if callbacks and "on_cycle_start" in callbacks:
+                callbacks["on_cycle_start"]({"cycle_label": cycle_label, "platforms": jobspy_platforms, "jt": jt, "term": term, "loc": loc})
+                
+            # Pass all platforms directly to do_scrape
+            jobspy_sites = [p for p in jobspy_platforms]
+            
+            def do_scrape(site_list, scrape_loc):
+                if not site_list: return
+                try:
+                    df = _scrape_with_retry({
+                        "site_name": site_list,
+                        "search_term": term,
+                        "location": scrape_loc,
+                        "job_type": jt,
+                        "results_wanted": results_wanted,
+                        "hours_old": hours_old,
+                        "country_indeed": search_cfg.get('country_indeed', 'India'),
+                        "linkedin_fetch_description": True,
+                        "proxies": proxies if proxies else None
+                    })
+                    if not df.empty:
+                        for _, row in df.iterrows():
+                            desc = clean_html(row.get("description", ""))
+                            if not desc: continue
+                            job = Job(
+                                id=str(uuid.uuid4()),
+                                title=str(row.get("title", "Unknown")),
+                                company=str(row.get("company", "Unknown")),
+                                location=str(row.get("location", "Unknown")),
+                                description=desc,
+                                url=str(row.get("job_url", row.get("url", ""))),
+                                source=str(row.get("site", "jobspy")),
+                                job_type=jt
+                            )
+                            # Attach date_posted for filtering
+                            job.date_posted = row.get("date_posted")
+                            job.is_remote = row.get("is_remote", False)
+                            all_raw_jobs.append(job)
+                            
+                            if callbacks and "on_job_scraped" in callbacks:
+                                callbacks["on_job_scraped"]({"title": job.title, "company": job.company, "platform": job.source, "cycle": cycle_label})
+                except Exception as e:
+                    logger.error(f"❌ Error scraping JobSpy {site_list} for '{term}': {e}")
+                    if callbacks and "on_error" in callbacks:
+                        callbacks["on_error"](str(e))
+                        
+            # Run all JobSpy platforms together
+            do_scrape(jobspy_sites, loc)
+            
+            if not test_mode:
+                time.sleep(random.uniform(5.0, 12.0))
+                
+        # 2. Workday Module
+        if not selected_platforms or "workday" in selected_platforms:
+            cycle_label = f"Workday API ({jt})"
+            if callbacks and "on_cycle_start" in callbacks:
+                callbacks["on_cycle_start"]({"cycle_label": cycle_label, "platforms": ["workday"], "jt": jt, "term": "All Configured", "loc": "All Configured"})
+                
+            workday_queries = search_terms
+            if jt == "internship":
+                workday_queries = [f"{q} intern" for q in search_terms] + ["intern", "internship"]
+                
+            try:
+                wd_jobs = scrape_workday(queries=workday_queries, test_mode=test_mode, max_results_per_query=results_wanted)
+                for w_job in wd_jobs:
+                    w_job.job_type = jt
+                    w_job.date_posted = pd.Timestamp.now(tz="UTC") # Workday API may not provide exact date in simple JSON, assume fresh
+                    all_raw_jobs.append(w_job)
+                    if callbacks and "on_job_scraped" in callbacks:
+                        callbacks["on_job_scraped"]({"title": w_job.title, "company": w_job.company, "platform": w_job.source, "cycle": cycle_label})
+            except Exception as e:
+                logger.error(f"❌ Error scraping Workday: {e}")
+                if callbacks and "on_error" in callbacks:
+                    callbacks["on_error"](str(e))
+                    
+        # 3. JSON-LD Module
+        if not selected_platforms or "jsonld" in selected_platforms:
+            cycle_label = f"JSON-LD ({jt})"
+            if callbacks and "on_cycle_start" in callbacks:
+                callbacks["on_cycle_start"]({"cycle_label": cycle_label, "platforms": ["jsonld"], "jt": jt, "term": "JSON-LD Search", "loc": "All Configured"})
+            try:
+                jld_jobs = scrape_jsonld(test_mode=test_mode)
+                for j_job in jld_jobs:
+                    j_job.job_type = jt
+                    j_job.date_posted = pd.Timestamp.now(tz="UTC")
+                    all_raw_jobs.append(j_job)
+                    if callbacks and "on_job_scraped" in callbacks:
+                        callbacks["on_job_scraped"]({"title": j_job.title, "company": j_job.company, "platform": j_job.source, "cycle": cycle_label})
+            except Exception as e:
+                logger.error(f"❌ Error scraping JSON-LD: {e}")
+                if callbacks and "on_error" in callbacks:
+                    callbacks["on_error"](str(e))
+
+    # Finally, apply the strict Pandas filters
+    filtered_jobs = apply_pandas_filter(all_raw_jobs, locations, callbacks=callbacks, test_mode=test_mode)
+    
     stats = {
-        "found_initial": before_count,
-        "pandas_dropped": before_count - after_count - dropped_dedup,
-        "dedup_dropped": dropped_dedup,
-        "reached_scoring": after_count
+        "found_initial": len(all_raw_jobs),
+        "pandas_dropped": len(all_raw_jobs) - len(filtered_jobs),
+        "dedup_dropped": 0, # Included in pandas_dropped
+        "reached_scoring": len(filtered_jobs)
     }
 
-    logger.info(f"✅ Returning {len(final_jobs)} job listings with cleaned descriptions.")
-    return final_jobs, stats
+    logger.info(f"✅ Scraper pipeline finished. Returning {len(filtered_jobs)} viable jobs.")
+    return filtered_jobs, stats

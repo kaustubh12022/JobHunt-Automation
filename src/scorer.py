@@ -89,29 +89,31 @@ def score_jobs(jobs: list[Job], test_mode=False, callbacks=None) -> list[Job]:
         if callbacks and "on_score_start" in callbacks:
             callbacks["on_score_start"](job_id, job.title, job.company)
 
-        # Check JD Cache First
+        # Check JD Cache First (skip for manual tailor requests with no URL)
+        has_url = bool(job.url and job.url.strip())
         try:
             from src.db import get_cached_jd_score, save_jd_cache
-            cached = get_cached_jd_score(job.url)
-            if cached:
-                job.score = cached.get('score', 0)
-                job.missing_skills = cached.get('missing_skills', [])
-                
-                raw_req = cached.get('extracted_requirements', '')
-                if '|||REASON|||' in raw_req:
-                    req_parts = raw_req.split('|||REASON|||')
-                    job.extracted_requirements = req_parts[0]
-                    job.reasons = req_parts[1]
-                else:
-                    job.extracted_requirements = raw_req
-                    job.reasons = ""
+            if has_url:
+                cached = get_cached_jd_score(job.url)
+                if cached:
+                    job.score = cached.get('score', 0)
+                    job.missing_skills = cached.get('missing_skills', [])
                     
-                job.is_testing_role = cached.get('is_testing_role', False)
-                job.tokens_used = 0
-                logger.debug(f"   → [{idx+1}/{len(relevant_jobs)}] (CACHED) Score: {job.score}%")
-                if callbacks and "on_score_complete" in callbacks:
-                    callbacks["on_score_complete"](job_id, job.score, job.reasons)
-                return job
+                    raw_req = cached.get('extracted_requirements', '')
+                    if '|||REASON|||' in raw_req:
+                        req_parts = raw_req.split('|||REASON|||')
+                        job.extracted_requirements = req_parts[0]
+                        job.reasons = req_parts[1]
+                    else:
+                        job.extracted_requirements = raw_req
+                        job.reasons = ""
+                        
+                    job.is_testing_role = cached.get('is_testing_role', False)
+                    job.tokens_used = 0
+                    logger.debug(f"   → [{idx+1}/{len(relevant_jobs)}] (CACHED) Score: {job.score}%")
+                    if callbacks and "on_score_complete" in callbacks:
+                        callbacks["on_score_complete"](job_id, job.score, job.reasons)
+                    return job
         except Exception as ce:
             logger.debug(f"Cache check failed: {ce}")
 
@@ -145,12 +147,13 @@ def score_jobs(jobs: list[Job], test_mode=False, callbacks=None) -> list[Job]:
             job.extracted_requirements = result.get("extracted_requirements", "")
             job.is_testing_role = result.get("is_testing_role", False)
             
-            # Save to Cache
-            try:
-                combined_req = f"{job.extracted_requirements}|||REASON|||{job.reasons}"
-                save_jd_cache(job.url, job.score, job.missing_skills, combined_req, job.is_testing_role)
-            except Exception as ce:
-                logger.debug(f"Save to cache failed: {ce}")
+            # Save to Cache (skip for manual tailor requests with no URL)
+            if has_url:
+                try:
+                    combined_req = f"{job.extracted_requirements}|||REASON|||{job.reasons}"
+                    save_jd_cache(job.url, job.score, job.missing_skills, combined_req, job.is_testing_role)
+                except Exception as ce:
+                    logger.debug(f"Save to cache failed: {ce}")
 
             logger.debug(f"   → [{idx+1}/{len(relevant_jobs)}] Score: {job.score}% | QA: {job.is_testing_role} | Missing: {', '.join(job.missing_skills[:3])}...")
             
@@ -202,8 +205,12 @@ def score_jobs(jobs: list[Job], test_mode=False, callbacks=None) -> list[Job]:
     if test_mode:
         return scored_jobs
 
-    # Filter 50%+
-    filtered = [j for j in scored_jobs if j.score and j.score >= 50]
-    logger.info(f"✅ Scoring complete. {len(filtered)} jobs scored 50% or above.")
+    # Filter by minimum score
+    from src.config_loader import load_config
+    config = load_config()
+    min_score = config.get('scoring', {}).get('minimum_score', 70)
+
+    filtered = [j for j in scored_jobs if j.score and j.score >= min_score]
+    logger.info(f"✅ Scoring complete. {len(filtered)} jobs scored {min_score}% or above.")
 
     return filtered

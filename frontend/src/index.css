@@ -179,7 +179,7 @@ body {
   gap: 16px;
   overflow-x: auto;
   padding: 16px 0;
-  align-items: flex-start;
+  align-items: stretch;
   min-height: calc(100vh - 150px);
 }
 
@@ -206,6 +206,11 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  transition: border-color 0.2s, background 0.2s;
+}
+.kanban-column.drag-over {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.06);
 }
 .kanban-column-header {
   font-weight: 600;
@@ -229,8 +234,11 @@ body {
   padding: 16px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   border: 1px solid rgba(255,255,255,0.5);
-  cursor: pointer;
+  cursor: grab;
   transition: all 0.2s;
+}
+.kanban-card:active {
+  cursor: grabbing;
 }
 .kanban-card:hover {
   transform: translateY(-2px);
