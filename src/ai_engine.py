@@ -2,8 +2,10 @@
 AutoApply AI Engine — DeepSeek via OpenAI SDK.
 
 Supports two calling modes:
-  - Scoring:  thinking DISABLED (fast, cheap)
-  - Tailoring: thinking ENABLED  (deep reasoning, hyper-tailored)
+  - Scoring:  thinking DISABLED by default (fast, cheap)
+  - Tailoring: thinking ENABLED by default (deep reasoning, hyper-tailored)
+
+Model and thinking mode can be overridden at runtime via `runtime_settings`.
 
 Master resume is pinned as the system prompt to trigger DeepSeek's
 $0.0028/1M prompt caching rate.
@@ -15,6 +17,14 @@ import random
 from openai import OpenAI, AsyncOpenAI, RateLimitError
 from src.config_loader import load_config, load_resume
 from src.logger import logger
+
+# ── Runtime AI Settings (overridden by dashboard UI) ──
+runtime_settings = {
+    "scoring_model": "deepseek-v4-flash",
+    "scoring_thinking": False,
+    "tailoring_model": "deepseek-v4-pro",
+    "tailoring_thinking": True,
+}
 
 
 def _get_client() -> tuple[OpenAI, str]:
@@ -61,20 +71,26 @@ async def call_ai_scoring_async(user_prompt: str) -> tuple[str, int]:
     Call DeepSeek for job scoring concurrently.
     Returns (response_text, tokens_used)
     """
-    client, model = _get_async_client()
+    client, _ = _get_async_client()
     master_resume = _get_master_resume()
     
+    # Use runtime settings for model and thinking mode
+    scoring_model = runtime_settings.get("scoring_model", "deepseek-v4-flash")
+    scoring_thinking = runtime_settings.get("scoring_thinking", False)
+    thinking_type = "enabled" if scoring_thinking else "disabled"
+    
     system_prompt = _get_prompt("scoring_prompt.txt", master_resume)
+    logger.debug(f"   🧠 Scoring: model={scoring_model}, thinking={thinking_type}")
     
     try:
         kwargs = dict(
-            model=model,
+            model=scoring_model,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
             temperature=0.3,
-            extra_body={"thinking": {"type": "disabled"}}
+            extra_body={"thinking": {"type": thinking_type}}
         )
         for attempt in range(3):
             try:
@@ -113,21 +129,27 @@ async def call_ai_tailoring_async(user_prompt: str) -> tuple[str, int]:
     Call DeepSeek for resume tailoring concurrently.
     Returns (response_text, tokens_used)
     """
-    client, model = _get_async_client()
+    client, _ = _get_async_client()
     master_resume = _get_master_resume()
     
+    # Use runtime settings for model and thinking mode
+    tailoring_model = runtime_settings.get("tailoring_model", "deepseek-v4-pro")
+    tailoring_thinking = runtime_settings.get("tailoring_thinking", True)
+    thinking_type = "enabled" if tailoring_thinking else "disabled"
+    
     system_prompt = _get_prompt("tailoring_prompt.txt", master_resume)
+    logger.debug(f"   🧠 Tailoring: model={tailoring_model}, thinking={thinking_type}")
     
     try:
         kwargs = dict(
-            model="deepseek-v4-pro",
+            model=tailoring_model,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
             temperature=0.3,
             response_format={"type": "json_object"},
-            extra_body={"thinking": {"type": "enabled"}}
+            extra_body={"thinking": {"type": thinking_type}}
         )
         for attempt in range(3):
             try:

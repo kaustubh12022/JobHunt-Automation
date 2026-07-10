@@ -28,7 +28,7 @@ def main():
     platforms = ["linkedin", "indeed"]
     
     logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    logger.info("PHASE 1/5: SCRAPING JOBS")
+    logger.info("PHASE 1/4: SCRAPING JOBS")
     logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     try:
         jobs, scrape_stats = run_scraper(selected_platforms=platforms, test_mode=test_mode)
@@ -42,7 +42,7 @@ def main():
         return
         
     logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    logger.info("PHASE 2/5: AI SCORING")
+    logger.info("PHASE 2/4: AI SCORING")
     logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     try:
         scored_jobs = score_jobs(jobs, test_mode=test_mode)
@@ -60,7 +60,7 @@ def main():
     shortlisted = scored_jobs[:top_n]
     
     logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    logger.info("PHASE 3/5: TAILORING RESUMES & PDFS")
+    logger.info("PHASE 3/4: TAILORING RESUMES & PDFS")
     logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     
     from src.resume_tailor import tailor_resumes_batch

@@ -9,7 +9,8 @@ class Job:
     description: str          # Full cleaned description from Phase 1
     url: str
     id: Optional[str] = None
-    source: str = ""          # Which platform (LinkedIn, Indeed, etc.)
+    source: str = ""          # Which platform (LinkedIn, Indeed, Workday, etc.)
+    job_type: str = "fulltime" # fulltime or internship
     score: Optional[int] = None
     missing_skills: Optional[List[str]] = None   # Skills candidate LACKS for this role
     reasons: Optional[str] = None
@@ -17,3 +18,4 @@ class Job:
     is_testing_role: Optional[bool] = None
     unique_id: Optional[str] = None
     tailored_resume: Optional[dict] = None
+    tokens_used: int = 0

@@ -3,6 +3,8 @@ from pathlib import Path
 from supabase import create_client, Client
 from dotenv import load_dotenv
 from src.logger import logger
+from src.models import Job
+from datetime import datetime
 
 # Load environment variables
 load_dotenv()
@@ -113,6 +115,7 @@ def save_pipeline_results(pipeline_state, shortlisted_jobs, pdf_paths):
             "url": job.url,
             "description": getattr(job, 'description', ''),
             "source": getattr(job, 'source', None),
+            "job_type": getattr(job, 'job_type', 'fulltime'),
             "score": job.score,
             "missing_skills": getattr(job, 'missing_skills', []),
             "extracted_requirements": getattr(job, 'extracted_requirements', None),
@@ -128,6 +131,58 @@ def save_pipeline_results(pipeline_state, shortlisted_jobs, pdf_paths):
         
     # Trigger cleanup
     cleanup_old_pdfs()
+
+def save_manual_job(job: Job, pdf_path: str):
+    """Saves a manually tailored job to the tracker database."""
+    if not supabase: return
+    
+    # 1. Create a "manual" pipeline run to group these
+    run = supabase.table("pipeline_runs").insert({
+        "mode": "manual",
+        "jobs_scraped": 0,
+        "jobs_filtered": 0,
+        "jobs_scored": 1,
+        "jobs_shortlisted": 1,
+        "resumes_generated": 1 if pdf_path else 0,
+        "completed_at": datetime.utcnow().isoformat()
+    }).execute()
+    
+    run_id = run.data[0]["id"]
+    stored_pdf_url = pdf_path
+    
+    if pdf_path and os.path.exists(pdf_path):
+        filename = Path(pdf_path).name
+        try:
+            with open(pdf_path, 'rb') as f:
+                supabase.storage.from_("resumes").upload(filename, f.read())
+            public_url = supabase.storage.from_("resumes").get_public_url(filename)
+        except Exception as e:
+            logger.error(f"Failed to upload {filename} to Supabase: {e}")
+            
+    # 2. Insert the tracked job
+    job_record = supabase.table("tracked_jobs").insert({
+        "id": job.id,
+        "run_id": run_id,
+        "title": job.title,
+        "company": job.company,
+        "location": job.location,
+        "url": getattr(job, 'url', ''),
+        "description": getattr(job, 'description', ''),
+        "source": "manual",
+        "job_type": getattr(job, 'job_type', 'fulltime'),
+        "score": getattr(job, 'score', 0),
+        "missing_skills": getattr(job, 'missing_skills', []),
+        "extracted_requirements": getattr(job, 'extracted_requirements', None),
+        "is_testing_role": getattr(job, 'is_testing_role', None),
+        "tailored_resume": getattr(job, 'tailored_resume', None),
+        "pdf_filename": stored_pdf_url,
+    }).execute()
+    
+    # 3. Create application entry
+    supabase.table("applications").insert({
+        "job_id": job_record.data[0]["id"],
+        "status": "generated",
+    }).execute()
 
 def delete_pipeline_run(run_id: str):
     """Manually cascade delete a pipeline run and return the PDF paths that need local deletion."""
@@ -181,4 +236,34 @@ def get_job_pdf_path(job_id: str):
     if res.data and len(res.data) > 0:
         return res.data[0].get("pdf_filename")
     return None
+
+def delete_application(app_id: str):
+    """Deletes an application, its history, its associated tracked job, and returns the PDF path for local deletion."""
+    if not supabase: return None
+    
+    # Get the application to find the job_id
+    app_res = supabase.table("applications").select("job_id").eq("id", app_id).execute()
+    if not app_res.data:
+        return None
+        
+    job_id = app_res.data[0]["job_id"]
+    
+    # Get the job to find the pdf path
+    job_res = supabase.table("tracked_jobs").select("pdf_filename").eq("id", job_id).execute()
+    pdf_path = None
+    if job_res.data:
+        pdf_path = job_res.data[0].get("pdf_filename")
+        if pdf_path and "resumes/" in pdf_path:
+            filename = pdf_path.split("resumes/")[-1]
+            try:
+                supabase.storage.from_("resumes").remove([filename])
+            except:
+                pass
+
+    # Delete history, then app, then job
+    supabase.table("status_history").delete().eq("application_id", app_id).execute()
+    supabase.table("applications").delete().eq("id", app_id).execute()
+    supabase.table("tracked_jobs").delete().eq("id", job_id).execute()
+    
+    return pdf_path
 

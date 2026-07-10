@@ -13,6 +13,7 @@ import traceback
 from pathlib import Path
 import sys
 import os
+import asyncio
 if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8')
     sys.stderr.reconfigure(encoding='utf-8')
@@ -23,6 +24,7 @@ from src.scraper import run_scraper
 from src.scorer import score_jobs
 from src.config_loader import load_config, get_human_date_str
 from src.db import save_pipeline_results
+from src.ai_engine import runtime_settings
 from datetime import datetime
 
 app = Flask(__name__, static_folder='frontend/dist')
@@ -108,7 +110,6 @@ logger.add(pipeline_log_interceptor, format="{message}")
 # EVENT CALLBACKS
 # ══════════════════════════════════════════════
 def on_cycle_start(cycle_data):
-    pipeline_state["scan"]["live_jobs"] = []
     if isinstance(cycle_data, dict):
         pipeline_state["scan"]["current_params"] = cycle_data
         pipeline_state["status_text"] = f"Scraping {cycle_data.get('term', '')} in {cycle_data.get('loc', '')}..."
@@ -116,8 +117,10 @@ def on_cycle_start(cycle_data):
         pipeline_state["status_text"] = str(cycle_data)
 
 def on_job_scraped(job_dict):
-    # Just append since we clear it every cycle
-    pipeline_state["scan"]["live_jobs"].append(job_dict)
+    pipeline_state["scan"]["total_found"] += 1
+    pipeline_state["scan"]["live_jobs"].insert(0, job_dict)
+    if len(pipeline_state["scan"]["live_jobs"]) > 100:
+        pipeline_state["scan"]["live_jobs"].pop()
 
 def on_job_dropped(title, company, reason):
     if len(pipeline_state["filter"]["dropped_jobs"]) < 100:
@@ -145,13 +148,14 @@ callbacks = {
 # ══════════════════════════════════════════════
 # PRODUCTION PIPELINE
 # ══════════════════════════════════════════════
-def run_pipeline(platforms, dry_run=False, test_mode=False):
+def run_pipeline(platforms, job_types=None, dry_run=False, test_mode=False):
     """Background thread that runs the full pipeline for both PROD and TEST modes."""
     global pipeline_state
     try:
         pipeline_state["running"] = True
         pipeline_state["mode"] = "test" if test_mode else "prod"
         pipeline_state["phase"] = "scanning"
+        pipeline_state["scan"]["current_params"] = None
         pipeline_state["scan"]["live_jobs"] = []
         pipeline_state["scan"]["total_found"] = 0
         pipeline_state["filter"]["dropped_jobs"] = []
@@ -162,9 +166,9 @@ def run_pipeline(platforms, dry_run=False, test_mode=False):
         logger.info(f"🚀 Pipeline started!{mode_label}")
 
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        logger.info("PHASE 1/5: SCRAPING JOBS")
+        logger.info("PHASE 1/4: SCRAPING JOBS")
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        jobs, scrape_stats = run_scraper(selected_platforms=platforms, test_mode=test_mode, callbacks=callbacks)
+        jobs, scrape_stats = run_scraper(selected_platforms=platforms, selected_job_types=job_types, test_mode=test_mode, callbacks=callbacks)
         pipeline_state["scan"]["total_found"] = scrape_stats.get("found_initial", len(jobs))
         pipeline_state["filter"]["after"] = scrape_stats.get("reached_scoring", len(jobs))
 
@@ -176,12 +180,11 @@ def run_pipeline(platforms, dry_run=False, test_mode=False):
 
         pipeline_state["phase"] = "scoring"
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        logger.info("PHASE 2/5: AI SCORING")
+        logger.info("PHASE 2/4: AI SCORING")
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         
         if test_mode:
-            logger.info("🧪 TEST MODE: Limiting to 5 jobs for scoring")
-            jobs = jobs[:5]
+            logger.info("🧪 TEST MODE: Scoring all jobs, but limiting resumes to 3.")
             
         scored_jobs = score_jobs(jobs, test_mode=test_mode, callbacks=callbacks)
         pipeline_state["score"]["scored"] = len(scored_jobs)
@@ -192,14 +195,18 @@ def run_pipeline(platforms, dry_run=False, test_mode=False):
 
         if stop_event.is_set(): return
 
-        config = load_config()
-        top_n = 1 if test_mode else config['scoring'].get('top_n', 20)
-        shortlisted = scored_jobs[:top_n]
+        if test_mode:
+            shortlisted = scored_jobs[:3]
+            logger.info("🧪 TEST MODE: Generating resumes for top 3 jobs.")
+        else:
+            shortlisted = scored_jobs
+            logger.info(f"Generating resumes for all {len(shortlisted)} jobs that passed the threshold.")
+            
         pipeline_state["score"]["shortlisted"] = len(shortlisted)
 
         pipeline_state["phase"] = "tailoring"
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        logger.info("PHASE 3/5: TAILORING RESUMES & PDFS")
+        logger.info("PHASE 3/4: TAILORING RESUMES & PDFS")
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
         from src.resume_tailor import tailor_resume
@@ -331,10 +338,14 @@ def start_pipeline():
     # Read platform selections from frontend toggles
     data = request.get_json(silent=True) or {}
     platforms = data.get('platforms', ["linkedin", "indeed"])
+    job_types = data.get('job_types', ["fulltime", "internship"])
     dry_run = data.get('dry_run', False)
     
+    # Apply AI model settings from frontend
+    _apply_ai_settings(data)
+    
     stop_event.clear()
-    thread = threading.Thread(target=run_pipeline, args=(platforms, dry_run))
+    thread = threading.Thread(target=run_pipeline, args=(platforms, job_types, dry_run, False))
     thread.daemon = True
     thread.start()
     return jsonify({"message": "Started successfully"})
@@ -348,9 +359,13 @@ def start_test_pipeline():
     # Read platform selections from frontend toggles
     data = request.get_json(silent=True) or {}
     platforms = data.get('platforms', ["linkedin", "indeed"])
+    job_types = data.get('job_types', ["fulltime", "internship"])
+    
+    # Apply AI model settings from frontend
+    _apply_ai_settings(data)
     
     stop_event.clear()
-    thread = threading.Thread(target=run_pipeline, args=(platforms, False, True))
+    thread = threading.Thread(target=run_pipeline, args=(platforms, job_types, False, True))
     thread.daemon = True
     thread.start()
     return jsonify({"message": "Test pipeline started"})
@@ -402,6 +417,20 @@ def api_delete_run(run_id):
         return jsonify({"message": f"Run deleted. {deleted_count} local PDFs removed."})
     except Exception as e:
         logger.error(f"Error deleting run: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/applications/<app_id>', methods=['DELETE'])
+def delete_app_endpoint(app_id):
+    from src.db import delete_application
+    try:
+        pdf_path = delete_application(app_id)
+        if pdf_path:
+            p = Path(pdf_path)
+            if p.exists():
+                p.unlink()
+        return jsonify({"message": "Application deleted successfully"})
+    except Exception as e:
+        logger.error(f"Error deleting application: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/resume/<job_id>', methods=['GET'])
@@ -470,6 +499,29 @@ def get_logs():
 def get_config_api():
     config = load_config()
     return jsonify(config)
+
+
+def _apply_ai_settings(data: dict):
+    """Apply AI model/thinking settings from frontend request to runtime_settings."""
+    if 'scoring_model' in data:
+        runtime_settings['scoring_model'] = data['scoring_model']
+    if 'scoring_thinking' in data:
+        runtime_settings['scoring_thinking'] = bool(data['scoring_thinking'])
+    if 'tailoring_model' in data:
+        runtime_settings['tailoring_model'] = data['tailoring_model']
+    if 'tailoring_thinking' in data:
+        runtime_settings['tailoring_thinking'] = bool(data['tailoring_thinking'])
+    logger.info(
+        f"\u2699\ufe0f AI Settings: "
+        f"Scoring=[{runtime_settings['scoring_model']}, thinking={'ON' if runtime_settings['scoring_thinking'] else 'OFF'}] | "
+        f"Tailoring=[{runtime_settings['tailoring_model']}, thinking={'ON' if runtime_settings['tailoring_thinking'] else 'OFF'}]"
+    )
+
+
+@app.route('/api/ai-settings', methods=['GET'])
+def get_ai_settings():
+    """Return current AI runtime settings for the frontend."""
+    return jsonify(runtime_settings)
 
 
 @app.route('/edit_profile', methods=['GET', 'POST'])
@@ -549,6 +601,9 @@ def manual_tailor_generate():
     if not pdf_path:
         return jsonify({"error": "Failed to generate resume"}), 500
         
+    from src.db import save_manual_job
+    save_manual_job(job, pdf_path)
+    
     filename = os.path.basename(pdf_path)
     return jsonify({"pdf_url": f"/api/resume/manual/{filename}"})
 
@@ -558,6 +613,7 @@ def get_manual_resume(filename):
     if not os.path.exists(manual_dir):
         os.makedirs(manual_dir)
     return send_from_directory(manual_dir, filename)
+
 
 if __name__ == '__main__':
     logger.info("🌐 Starting AutoApply Dashboard on http://0.0.0.0:5000")

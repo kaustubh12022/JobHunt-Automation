@@ -4,7 +4,6 @@ import Dashboard from './pages/Dashboard';
 import Tracker from './pages/Tracker';
 import JobDetailPage from './pages/JobDetailPage';
 import ManualTailor from './pages/ManualTailor';
-
 function Layout({ children }) {
   const location = useLocation();
   const isDashboard = location.pathname === '/';
