@@ -40,7 +40,7 @@ search:
 # --- Scoring Settings ---
 scoring:
   minimum_score: 70
-  top_n: 20
+  top_n: 30
 
 # --- Output Settings ---
 output:

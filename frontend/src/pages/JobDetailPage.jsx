@@ -46,19 +46,19 @@ export default function JobDetailPage() {
 
   return (
     <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto', height: 'calc(100vh - 70px)', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
         <button 
           onClick={() => navigate('/tracker')} 
           style={{ background: 'var(--bg-panel)', color: 'var(--text-main)', border: '1px solid var(--border-color)', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
         >
-          ← Back to Tracker
+          ← Back
         </button>
-        <h1 style={{ fontSize: '24px', margin: 0 }}>{company}</h1>
+        <h1 style={{ fontSize: '20px', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{company}</h1>
       </div>
 
-      <div style={{ display: 'flex', gap: '24px', flex: 1, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', gap: '24px', flex: 1, overflow: 'hidden', flexDirection: 'column' }} className="responsive-container">
         {/* Left Panel */}
-        <div style={{ width: '45%', display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto', paddingRight: '8px' }}>
+        <div style={{ width: '100%', flex: '1 1 auto', display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto', paddingRight: '8px' }} className="left-panel">
           
           <div className="glass-panel" style={{ padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
@@ -115,7 +115,7 @@ export default function JobDetailPage() {
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                <h3 style={{ margin: 0, fontSize: '18px' }}>Job Description</h3>
                <button 
-                  onClick={() => window.open(`/api/resume/${jobId}`, '_blank')}
+                  onClick={() => window.open(`${import.meta.env.VITE_API_URL || ''}/api/resume/${jobId}`, '_blank')}
                   style={{ background: 'var(--bg-panel)', color: 'var(--text-main)', border: '1px solid var(--border-color)', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold' }}
                 >
                   Download Resume ↓
@@ -134,15 +134,23 @@ export default function JobDetailPage() {
         </div>
 
         {/* Right Panel */}
-        <div style={{ width: '55%', height: '100%', background: 'var(--bg-panel)', borderRadius: '16px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+        <div style={{ width: '100%', flex: '1 1 500px', background: 'var(--bg-panel)', borderRadius: '16px', border: '1px solid var(--border-color)', overflow: 'hidden', minHeight: '400px' }} className="right-panel">
           <iframe 
-            src={`/api/resume/${jobId}`} 
+            src={`${import.meta.env.VITE_API_URL || ''}/api/resume/${jobId}`} 
             style={{ width: '100%', height: '100%', border: 'none' }}
             title="Resume PDF"
           />
         </div>
 
       </div>
+      
+      <style>{`
+        @media (min-width: 768px) {
+          .responsive-container { flex-direction: row !important; }
+          .left-panel { width: 45% !important; }
+          .right-panel { width: 55% !important; flex: 1 1 auto !important; }
+        }
+      `}</style>
     </div>
   );
 }
