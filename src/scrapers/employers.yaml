@@ -1,0 +1,69 @@
+# Workday employer registry for AutoApply
+
+employers:
+
+  cisco:
+    name: "Cisco"
+    tenant: "cisco"
+    site_id: "Cisco_Careers"
+    base_url: "https://cisco.wd5.myworkdayjobs.com"
+
+  nvidia:
+    name: "NVIDIA"
+    tenant: "nvidia"
+    site_id: "NVIDIAExternalCareerSite"
+    base_url: "https://nvidia.wd5.myworkdayjobs.com"
+
+  salesforce:
+    name: "Salesforce"
+    tenant: "salesforce"
+    site_id: "External_Career_Site"
+    base_url: "https://salesforce.wd12.myworkdayjobs.com"
+
+  adobe:
+    name: "Adobe"
+    tenant: "adobe"
+    site_id: "external_experienced"
+    base_url: "https://adobe.wd5.myworkdayjobs.com"
+
+  intel:
+    name: "Intel"
+    tenant: "intel"
+    site_id: "External"
+    base_url: "https://intel.wd1.myworkdayjobs.com"
+
+  mastercard:
+    name: "Mastercard"
+    tenant: "mastercard"
+    site_id: "CorporateCareers"
+    base_url: "https://mastercard.wd1.myworkdayjobs.com"
+
+  pwc:
+    name: "PwC"
+    tenant: "pwc"
+    site_id: "Global_Experienced_Careers"
+    base_url: "https://pwc.wd3.myworkdayjobs.com"
+
+  bdo:
+    name: "BDO"
+    tenant: "bdo"
+    site_id: "BDO"
+    base_url: "https://bdo.wd3.myworkdayjobs.com"
+
+  motorolasolutions:
+    name: "Motorola Solutions"
+    tenant: "motorolasolutions"
+    site_id: "Careers"
+    base_url: "https://motorolasolutions.wd5.myworkdayjobs.com"
+
+  thomsonreuters:
+    name: "Thomson Reuters"
+    tenant: "thomsonreuters"
+    site_id: "External_Career_Site"
+    base_url: "https://thomsonreuters.wd5.myworkdayjobs.com"
+
+  target:
+    name: "Target"
+    tenant: "target"
+    site_id: "TargetCareers"
+    base_url: "https://target.wd5.myworkdayjobs.com"

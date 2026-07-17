@@ -15,7 +15,13 @@ def load_config() -> dict:
     """Load main configuration from config.yaml."""
     config_path = Path(__file__).parent.parent / "config.yaml"
     with open(config_path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+        config = yaml.safe_load(f)
+        
+    output_path = os.environ.get("OUTPUT_PATH")
+    if output_path and "output" in config:
+        config["output"]["desktop_path"] = output_path
+        
+    return config
 
 def load_resume() -> dict:
     """Load master resume from data_folder/plain_text_resume.yaml."""

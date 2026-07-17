@@ -214,8 +214,9 @@ def delete_pipeline_run(run_id: str):
     apps = supabase.table("applications").select("id").in_("job_id", job_ids).execute().data
     app_ids = [a["id"] for a in apps]
     
-    # 3. Delete status history
+    # 3. Delete status history and apply logs
     if app_ids:
+        supabase.table("apply_logs").delete().in_("application_id", app_ids).execute()
         supabase.table("status_history").delete().in_("application_id", app_ids).execute()
         
     # 4. Delete applications
@@ -235,6 +236,69 @@ def get_job_pdf_path(job_id: str):
     res = supabase.table("tracked_jobs").select("pdf_filename").eq("id", job_id).execute()
     if res.data and len(res.data) > 0:
         return res.data[0].get("pdf_filename")
+    return None
+
+def resolve_local_pdf_path(job_id: str) -> str:
+    """
+    Returns a verified LOCAL filesystem path to the job's PDF.
+    If the DB stores a Supabase URL, searches the output directory for the file.
+    Returns empty string if not found locally.
+    """
+    import os
+    pdf_path = get_job_pdf_path(job_id)
+    if not pdf_path:
+        return ""
+    
+    # Case 1: It's already a local path and exists
+    if not pdf_path.startswith("http") and os.path.exists(pdf_path):
+        return pdf_path
+    
+    # Case 2: It's a Supabase URL — extract filename and search locally
+    if pdf_path.startswith("http"):
+        filename = pdf_path.split("/")[-1]
+    else:
+        filename = os.path.basename(pdf_path)
+    
+    # Search in the output directories
+    from src.config_loader import load_config
+    config = load_config()
+    output_dir = os.path.join(config['output']['desktop_path'], config['output']['folder_name'])
+    
+    search_dirs = [
+        os.path.join(output_dir, "main pipeline"),
+        os.path.join(output_dir, "test"),
+        os.path.join(os.getcwd(), "output", "manual"),
+    ]
+    
+    for search_dir in search_dirs:
+        if os.path.exists(search_dir):
+            for root, dirs, files in os.walk(search_dir):
+                if filename in files:
+                    return os.path.join(root, filename)
+    
+    return ""
+
+def get_job_by_id(job_id: str):
+    if not supabase: return None
+    res = supabase.table("tracked_jobs").select("*").eq("id", job_id).execute()
+    if res.data and len(res.data) > 0:
+        # Convert dictionary to Job dataclass
+        data = res.data[0]
+        return Job(
+            id=data.get("id"),
+            title=data.get("title"),
+            company=data.get("company"),
+            location=data.get("location"),
+            description=data.get("description"),
+            url=data.get("url"),
+            source=data.get("source"),
+            job_type=data.get("job_type"),
+            score=data.get("score"),
+            missing_skills=data.get("missing_skills"),
+            extracted_requirements=data.get("extracted_requirements"),
+            is_testing_role=data.get("is_testing_role"),
+            tailored_resume=data.get("tailored_resume")
+        )
     return None
 
 def delete_application(app_id: str):
@@ -260,8 +324,9 @@ def delete_application(app_id: str):
             except:
                 pass
 
-    # Delete history, then app, then job
+    # Delete history, apply logs, then app, then job
     supabase.table("status_history").delete().eq("application_id", app_id).execute()
+    supabase.table("apply_logs").delete().eq("application_id", app_id).execute()
     supabase.table("applications").delete().eq("id", app_id).execute()
     supabase.table("tracked_jobs").delete().eq("id", job_id).execute()
     

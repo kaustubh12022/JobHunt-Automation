@@ -10,10 +10,10 @@ Features:
 import json
 import threading
 import traceback
+import time
 from pathlib import Path
 import sys
 import os
-import asyncio
 if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8')
     sys.stderr.reconfigure(encoding='utf-8')
@@ -23,11 +23,43 @@ from src.logger import logger, log_queue
 from src.scraper import run_scraper
 from src.scorer import score_jobs
 from src.config_loader import load_config, get_human_date_str
-from src.db import save_pipeline_results
+from src.db import save_pipeline_results, supabase
 from src.ai_engine import runtime_settings
 from datetime import datetime
+from flask_cors import CORS
 
 app = Flask(__name__, static_folder='frontend/dist')
+CORS(app)
+
+# ══════════════════════════════════════════════
+# SUPABASE REALTIME SYNCER
+# ══════════════════════════════════════════════
+last_synced_state = None
+def sync_state_to_supabase():
+    global last_synced_state
+    while True:
+        time.sleep(2)
+        if not supabase: continue
+        current_state = json.dumps(pipeline_state)
+        if current_state != last_synced_state:
+            try:
+                supabase.table("live_pipeline").upsert({
+                    "id": 1,
+                    "phase": pipeline_state["phase"],
+                    "running": pipeline_state["running"],
+                    "mode": pipeline_state["mode"],
+                    "status_text": pipeline_state["status_text"],
+                    "scan_data": pipeline_state["scan"],
+                    "score_data": pipeline_state["score"],
+                    "tailor_data": pipeline_state["tailor"],
+                    "updated_at": datetime.utcnow().isoformat()
+                }).execute()
+                last_synced_state = current_state
+            except Exception as e:
+                logger.error(f"Live sync failed: {e}")
+
+threading.Thread(target=sync_state_to_supabase, daemon=True).start()
+
 
 # ══════════════════════════════════════════════
 # PIPELINE STATE MACHINES
@@ -85,19 +117,21 @@ def extract_number(text):
     return int(match.group()) if match else 0
 
 def pipeline_log_interceptor(message):
-    """Parses log messages to update pipeline_state for the dashboard."""
+    """Parses log messages to update pipeline_state for the dashboard.
+    
+    NOTE: total_found is ONLY incremented by the on_job_scraped callback.
+    The log interceptor must NOT touch total_found — doing so caused a
+    triple-counting bug where log messages like 'Found 200 jobs' added
+    their number on top of the per-job callback increments.
+    """
     text = message.record["message"]
     text_lower = text.lower()
     
-    # Just basic matching for Phase 1, we can improve later if needed
     pipeline_state["status_text"] = text
     if "scraping" in text_lower and "linkedin" in text_lower:
         pipeline_state["scan"]["current_platform"] = "linkedin"
     elif "scraping" in text_lower and "indeed" in text_lower:
         pipeline_state["scan"]["current_platform"] = "indeed"
-    elif "jobs found" in text_lower or ("found" in text_lower and "jobs" in text_lower):
-        if "raw jobs" not in text_lower and "pre-filter" not in text_lower:
-            pipeline_state["scan"]["total_found"] += extract_number(text)
     elif "pre-filter" in text_lower:
         pipeline_state["phase"] = "filtering"
 
@@ -111,10 +145,19 @@ logger.add(pipeline_log_interceptor, format="{message}")
 # ══════════════════════════════════════════════
 def on_cycle_start(cycle_data):
     if isinstance(cycle_data, dict):
-        pipeline_state["scan"]["current_params"] = cycle_data
-        pipeline_state["status_text"] = f"Scraping {cycle_data.get('term', '')} in {cycle_data.get('loc', '')}..."
+        if "wait_time" in cycle_data:
+            pipeline_state["status_text"] = cycle_data["message"]
+            pipeline_state["scan"]["is_waiting"] = True
+            pipeline_state["scan"]["wait_time"] = cycle_data["wait_time"]
+            logger.info(f"Wait Delay: {cycle_data['wait_time']}s")
+        else:
+            pipeline_state["scan"]["current_params"] = cycle_data
+            pipeline_state["status_text"] = f"Scraping {cycle_data.get('term', '')} in {cycle_data.get('loc', '')}..."
+            pipeline_state["scan"]["is_waiting"] = False
+            logger.info(f"--- UI CYCLE UPDATED TO: {cycle_data.get('current_cycle')} ---")
     else:
         pipeline_state["status_text"] = str(cycle_data)
+        pipeline_state["scan"]["is_waiting"] = False
 
 def on_job_scraped(job_dict):
     pipeline_state["scan"]["total_found"] += 1
@@ -169,7 +212,9 @@ def run_pipeline(platforms, job_types=None, dry_run=False, test_mode=False):
         logger.info("PHASE 1/4: SCRAPING JOBS")
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         jobs, scrape_stats = run_scraper(selected_platforms=platforms, selected_job_types=job_types, test_mode=test_mode, callbacks=callbacks)
-        pipeline_state["scan"]["total_found"] = scrape_stats.get("found_initial", len(jobs))
+        # NOTE: Do NOT overwrite total_found here — the on_job_scraped callback
+        # is the single source of truth and has been incrementing it live.
+        # Overwriting caused the UI counter to jump erratically.
         pipeline_state["filter"]["after"] = scrape_stats.get("reached_scoring", len(jobs))
 
         if not jobs:
@@ -484,8 +529,6 @@ def api_get_resume(job_id):
     except Exception as e:
         logger.error(f"Error fetching resume: {e}")
         return jsonify({"error": str(e)}), 500
-
-
 
 @app.route('/api/logs', methods=['GET'])
 def get_logs():

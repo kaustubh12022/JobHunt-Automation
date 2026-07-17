@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import KanbanBoard from '../components/tracker/KanbanBoard';
+import MobileTrackerView from '../components/tracker/MobileTrackerView';
 import FilterBar from '../components/tracker/FilterBar';
+import { api } from '../lib/api';
 
 export default function Tracker() {
   const [applications, setApplications] = useState([]);
@@ -12,6 +14,13 @@ export default function Tracker() {
   const [dateFilter, setDateFilter] = useState('');
   const [platformFilter, setPlatformFilter] = useState('');
   const [jobTypeFilter, setJobTypeFilter] = useState('');
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     fetchRuns();
@@ -93,7 +102,7 @@ export default function Tracker() {
     if (!window.confirm("Are you sure you want to permanently delete this pipeline run and all its local files?")) return;
     
     try {
-      const res = await fetch(`/api/runs/${selectedRunId}`, { method: 'DELETE' });
+      const res = await api(`/api/runs/${selectedRunId}`, { method: 'DELETE' });
       if (res.ok) {
         alert("Run deleted successfully.");
         setSelectedRunId('all');
@@ -111,7 +120,7 @@ export default function Tracker() {
     if (!window.confirm("Are you sure you want to permanently delete this application?")) return;
     
     try {
-      const res = await fetch(`/api/applications/${appId}`, { method: 'DELETE' });
+      const res = await api(`/api/applications/${appId}`, { method: 'DELETE' });
       if (res.ok) {
         fetchApplications();
       } else {
@@ -225,6 +234,21 @@ export default function Tracker() {
         <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
           Loading your applications...
         </div>
+      ) : isMobile ? (
+        <MobileTrackerView 
+          applications={filteredApps} 
+          columns={[
+            { id: 'generated', label: 'Generated' },
+            { id: 'applied', label: 'Applied' },
+            { id: 'shortlisted', label: 'Shortlisted' },
+            { id: 'interview', label: 'Interview' },
+            { id: 'offer', label: 'Offer' },
+            { id: 'accepted', label: 'Accepted' },
+            { id: 'rejected', label: 'Rejected' }
+          ]}
+          onStatusChange={handleStatusChange} 
+          onDeleteApp={handleDeleteApp} 
+        />
       ) : (
         <KanbanBoard applications={filteredApps} onStatusChange={handleStatusChange} onDeleteApp={handleDeleteApp} />
       )}

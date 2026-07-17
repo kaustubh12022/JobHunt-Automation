@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 export default function ApplicationCard({ app, onStatusChange, onDeleteApp, columns }) {
   const navigate = useNavigate();
   const isDragging = useRef(false);
+
   // Safe extraction for tracked_jobs
   const job = Array.isArray(app.tracked_jobs) ? app.tracked_jobs[0] : (app.tracked_jobs || {});
 

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Activity, CheckCircle, Database, BrainCircuit, FileSignature, Filter, Loader2, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { api } from '../lib/api';
 
 const initialPipelineState = {
   running: false,
@@ -131,6 +132,7 @@ function IdleView({ onStart }) {
               onChange={setScoringModel}
               options={[
                 { value: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash' },
+                { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro' },
               ]}
             />
             <div style={{ flex: 1 }}>
@@ -202,16 +204,16 @@ function IdleView({ onStart }) {
 function ScanView({ state }) {
   const jobs = state?.scan?.live_jobs || [];
   const p = state?.scan?.current_params;
-  const currentCycle = p ? p.cycle_label : (jobs.length > 0 ? jobs[0].cycle : (state?.status_text?.includes('Cycle') ? state.status_text : 'Initializing...'));
+  const statusText = state?.status_text || 'Waiting to start...';
   
   return (
     <div className="glass-panel" style={{ padding: '32px', maxWidth: '800px', margin: '20px auto', minHeight: '600px', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div>
-          <h2 style={{ margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h2 style={{ margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Activity size={24} color="var(--primary)" /> Scraping Jobs
           </h2>
-          <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '14px', fontWeight: 'bold' }}>{currentCycle}</p>
+          <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '14px' }}>{statusText}</p>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: '36px', fontWeight: 'bold', color: 'var(--primary)' }}>{state?.scan?.total_found || 0}</div>
@@ -225,21 +227,43 @@ function ScanView({ state }) {
           animate={{ opacity: 1, scale: 1 }}
           style={{ background: 'linear-gradient(135deg, #2563eb, #1e40af)', color: '#fff', borderRadius: '12px', padding: '20px', marginBottom: '24px', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)' }}
         >
-          <div style={{ fontSize: '12px', color: '#93c5fd', fontWeight: 600, marginBottom: '12px', letterSpacing: '0.05em' }}>LIVE MONITORING CYCLE</div>
-          <div style={{ display: 'flex', gap: '32px', fontSize: '16px', fontWeight: 500 }}>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '11px', color: '#bfdbfe', textTransform: 'uppercase', marginBottom: '4px' }}>Job Role</span>
-              <span>{p.term}</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '11px', color: '#bfdbfe', textTransform: 'uppercase', marginBottom: '4px' }}>Location</span>
-              <span>{p.loc}</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '11px', color: '#bfdbfe', textTransform: 'uppercase', marginBottom: '4px' }}>Job Type</span>
-              <span>{p.jt}</span>
-            </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+             <div style={{ fontSize: '12px', color: '#93c5fd', fontWeight: 600, letterSpacing: '0.05em' }}>LIVE MONITORING CYCLE</div>
+             {p.current_cycle && p.total_cycles && (
+                <div style={{ fontSize: '14px', fontWeight: 700, background: 'rgba(255,255,255,0.2)', padding: '4px 12px', borderRadius: '20px' }}>
+                  Cycle {p.current_cycle} of {p.total_cycles}
+                </div>
+             )}
           </div>
+
+          {state?.scan?.is_waiting ? (
+            <motion.div 
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              style={{ background: 'rgba(254, 243, 199, 0.1)', border: '1px solid rgba(245, 158, 11, 0.5)', borderRadius: '8px', padding: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}
+            >
+                <Loader2 className="spin" size={24} color="#fcd34d" />
+                <div>
+                   <div style={{ fontWeight: 700, fontSize: '15px', color: '#fcd34d' }}>Rate Limit Protection Pause</div>
+                   <div style={{ fontSize: '14px', marginTop: '4px', color: '#fde68a' }}>{statusText}</div>
+                </div>
+            </motion.div>
+          ) : (
+            <div style={{ display: 'flex', gap: '32px', fontSize: '16px', fontWeight: 500 }}>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '11px', color: '#bfdbfe', textTransform: 'uppercase', marginBottom: '4px' }}>Job Role</span>
+                <span>{p.term}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '11px', color: '#bfdbfe', textTransform: 'uppercase', marginBottom: '4px' }}>Location</span>
+                <span>{p.loc}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '11px', color: '#bfdbfe', textTransform: 'uppercase', marginBottom: '4px' }}>Job Type</span>
+                <span>{p.jt}</span>
+              </div>
+            </div>
+          )}
         </motion.div>
       )}
       
@@ -413,7 +437,7 @@ function PersistentSnapshotView({ state, onReset }) {
   const [expandedId, setExpandedId] = useState(null);
 
   return (
-    <div className="glass-panel" style={{ padding: '32px', maxWidth: '1200px', margin: '20px auto', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 80px)' }}>
+    <div className="glass-panel snapshot-panel" style={{ padding: '32px', maxWidth: '1200px', margin: '20px auto', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 80px)' }}>
       
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
@@ -435,7 +459,7 @@ function PersistentSnapshotView({ state, onReset }) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '24px', flex: 1, minHeight: 0 }}>
+      <div className="dashboard-modules" style={{ display: 'flex', gap: '24px', flex: 1, minHeight: 0 }}>
         
         {/* Module A: Scoring Audit */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', border: '1px solid var(--border-color)', borderRadius: '12px', background: '#fff', overflow: 'hidden' }}>
@@ -589,7 +613,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const res = await fetch('/api/status');
+        const res = await api('/api/status');
         const data = await res.json();
         setState(data);
       } catch (e) {
@@ -598,7 +622,7 @@ export default function Dashboard() {
     };
     fetchStatus();
 
-    const eventSource = new EventSource('/api/stream');
+    const eventSource = new EventSource(import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/stream` : '/api/stream');
     eventSource.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
@@ -614,7 +638,7 @@ export default function Dashboard() {
     try {
       setError('');
       const endpoint = testMode ? '/api/test-start' : '/api/start';
-      const res = await fetch(endpoint, {
+      const res = await api(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -647,7 +671,7 @@ export default function Dashboard() {
 
   const handleAbort = async () => {
     try {
-      await fetch('/api/stop', { method: 'POST' });
+      await api('/api/stop', { method: 'POST' });
     } catch (err) {
       console.error('Failed to abort', err);
     }
