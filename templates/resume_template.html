@@ -9,117 +9,161 @@
             size: A4;
             margin: 0;
         }
-        body {
-            font-family: "Times New Roman", Times, serif;
-            color: #000;
-            margin: 0;
-            padding: 0.40in 0.50in; /* reduced padding to fit strictly on one page */
+        * {
             box-sizing: border-box;
-            background-color: white;
-            font-size: 10.5pt;
-            line-height: 1.35; /* reduced line height slightly to prevent overflow */
         }
-
-        /* Typography */
-        h1 {
-            font-size: 22pt;
-            font-weight: bold;
-            color: #000;
-            margin: 0 0 6px 0;
-            text-align: center;
-        }
-        h2 {
-            font-size: 11pt;
-            font-weight: bold;
-            color: #000;
-            text-transform: uppercase;
-            border-bottom: 1px solid #000;
-            padding-bottom: 3px;
-            margin: 14px 0 6px 0;
-        }
-
-        /* Header Contact Info */
-        .contact {
-            text-align: center;
+        body {
+            font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #0f172a;
+            margin: 0;
+            padding: 0.32in 0.45in;
+            background-color: #ffffff;
             font-size: 9.5pt;
-            color: #000;
-            margin-bottom: 12px;
+            line-height: 1.34;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        h1 {
+            font-size: 19pt;
+            font-weight: 700;
+            color: #1e40af; /* Subtle royal blue accent */
+            margin: 0 0 3px 0;
+            letter-spacing: -0.2px;
+        }
+        .contact {
+            font-size: 9pt;
+            color: #475569;
+            margin: 0;
+            line-height: 1.3;
         }
         .contact a {
-            color: #000;
+            color: #1e40af;
             text-decoration: none;
         }
+        .contact a:hover {
+            text-decoration: underline;
+        }
 
-        /* Summary */
-        .summary {
+        /* Section Headings */
+        .section {
+            margin-top: 7px;
+            margin-bottom: 2px;
+        }
+        h2 {
             font-size: 10.5pt;
-            color: #000;
-            margin-bottom: 12px;
+            font-weight: 700;
+            color: #1e40af; /* Royal blue accent heading */
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            border-bottom: 1.2px solid #1e40af;
+            padding-bottom: 2px;
+            margin: 0 0 4px 0;
+        }
+
+        /* Profile Summary */
+        .summary {
+            font-size: 9.2pt;
+            color: #1e293b;
             text-align: justify;
-        }
-
-        /* Skills */
-        .skills-container {
-            margin-bottom: 12px;
-        }
-        .skills-container ul {
             margin: 0;
-            padding-left: 15px;
-        }
-        .skills-container li {
-            margin-bottom: 3px;
-            padding-left: 0;
+            line-height: 1.34;
         }
 
-        /* Robust Item Layouts */
+        /* Technical Skills */
+        .skills-content {
+            font-size: 9.2pt;
+            color: #1e293b;
+            line-height: 1.34;
+            margin: 0;
+        }
+        .skills-content strong {
+            color: #0f172a;
+        }
+
+        /* Item Containers (Experience, Projects, Education) */
         .item {
-            margin-bottom: 10px;
-            page-break-inside: avoid; /* Prevent orphans */
+            margin-bottom: 5px;
+            page-break-inside: avoid;
+        }
+        .item:last-child {
+            margin-bottom: 0;
         }
         
         .item-row {
-            display: table;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
             width: 100%;
-            table-layout: fixed;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
         }
         .item-left {
-            display: table-cell;
+            flex: 1 1 auto;
+            min-width: 0;
             text-align: left;
-            vertical-align: bottom;
         }
         .item-right {
-            display: table-cell;
+            flex: 0 0 auto;
             text-align: right;
-            vertical-align: bottom;
             white-space: nowrap;
+            margin-left: 8px;
         }
         
         .item-title {
-            font-weight: bold;
-            font-size: 10.5pt;
+            font-weight: 700;
+            font-size: 9.8pt;
+            color: #0f172a;
         }
-        .item-location, .item-date {
-            font-weight: normal;
-            font-size: 10.5pt;
+        .item-company {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 9.2pt;
         }
         .item-subtitle {
-            font-size: 10.5pt;
-            font-style: italic;
+            font-weight: 500;
+            color: #334155;
+            font-size: 9.2pt;
+        }
+        .item-tech {
+            font-weight: 500;
+            color: #475569;
+            font-size: 8.8pt;
+        }
+        .item-date, .item-location {
+            font-size: 8.8pt;
+            color: #475569;
+            font-variant-numeric: tabular-nums;
+        }
+        .item-date a {
+            color: #1e40af;
+            text-decoration: none;
         }
 
-        /* Bullet Points */
+        /* Bullet lists */
         ul {
-            margin: 4px 0 0 0;
+            margin: 2px 0 0 0;
             padding-left: 15px;
+            list-style-type: disc;
         }
         li {
-            margin-bottom: 4px;
-            padding-left: 0px;
+            font-size: 9pt;
+            color: #1e293b;
+            line-height: 1.32;
+            margin-bottom: 2px;
             text-align: justify;
         }
-        li::marker {
-            font-size: 10pt;
+        li:last-child {
+            margin-bottom: 0;
+        }
+        li strong {
+            color: #0f172a;
+        }
+        .cert-list li {
+            margin-bottom: 1.5px;
         }
     </style>
 </head>
@@ -130,7 +174,8 @@
         <div class="contact">
             {% set contact_items = [] %}
             {% if resume.personal_information.phone %}
-                {% set _ = contact_items.append(resume.personal_information.phone) %}
+                {% set phone_str = (resume.personal_information.phone_prefix ~ ' ' if resume.personal_information.phone_prefix and not resume.personal_information.phone.startswith('+') else '') ~ resume.personal_information.phone %}
+                {% set _ = contact_items.append(phone_str) %}
             {% endif %}
             {% if resume.personal_information.email %}
                 {% set _ = contact_items.append('<a href="mailto:' ~ resume.personal_information.email ~ '">' ~ resume.personal_information.email ~ '</a>') %}
@@ -141,63 +186,46 @@
             {% if resume.personal_information.github %}
                 {% set _ = contact_items.append('<a href="' ~ resume.personal_information.github ~ '">GitHub</a>') %}
             {% endif %}
+            {% if resume.personal_information.city or resume.personal_information.address %}
+                {% set loc = resume.personal_information.city ~ (', ' ~ resume.personal_information.country if resume.personal_information.country else '') if resume.personal_information.city else resume.personal_information.address %}
+                {% set _ = contact_items.append(loc) %}
+            {% endif %}
             {{ contact_items | join(' | ') | safe }}
         </div>
     </header>
 
     {% if resume.profile_summary or resume.professional_summary %}
-    <div>
-        <h2>PROFILE</h2>
+    <div class="section">
+        <h2>PROFILE SUMMARY</h2>
         <div class="summary">
             {{ resume.profile_summary or resume.professional_summary }}
         </div>
     </div>
     {% endif %}
 
-    {% if resume.education_details %}
-    <div>
-        <h2>EDUCATION</h2>
-        {% for edu in resume.education_details %}
-        <div class="item">
-            <div class="item-row">
-                <div class="item-left item-title">{{ edu.institution or edu.university }}</div>
-                <div class="item-right item-location">Pune, India</div>
-            </div>
-            <div class="item-row">
-                <div class="item-left item-subtitle">{{ edu.education_level }} in {{ edu.field_of_study }}</div>
-                <div class="item-right item-date">{{ edu.year_of_completion }}</div>
-            </div>
-            <ul>
-                <li>Secured {{ edu.final_evaluation_grade }}.</li>
-            </ul>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
     {% if resume.skills %}
-    <div class="skills-container">
-        <h2>SKILLS</h2>
-        <ul>
-            <li><strong>Technical & Tools:</strong> {{ resume.skills | join(', ') }}</li>
-        </ul>
+    <div class="section">
+        <h2>TECHNICAL SKILLS</h2>
+        <div class="skills-content">
+            <strong>Technical &amp; Tools:</strong> {{ resume.skills | join(', ') }}
+        </div>
     </div>
     {% endif %}
 
     {# Macro for Experience block #}
     {% macro render_experience() %}
         {% if resume.experience_details %}
-        <div>
-            <h2>EXPERIENCE</h2>
+        <div class="section">
+            <h2>WORK EXPERIENCE</h2>
             {% for exp in resume.experience_details %}
             <div class="item">
                 <div class="item-row">
-                    <div class="item-left item-title">{{ exp.company }}</div>
-                    <div class="item-right item-location">{{ exp.location }}</div>
-                </div>
-                <div class="item-row">
-                    <div class="item-left item-subtitle">{{ exp.position }}</div>
-                    <div class="item-right item-date">{{ exp.employment_period or (exp.date_from ~ ' - ' ~ (exp.date_to if exp.date_to else 'Present')) }}</div>
+                    <div class="item-left">
+                        <span class="item-title">{{ exp.position }}</span> &ndash; <span class="item-company">{{ exp.company }}</span>{% if exp.location %}, <span class="item-location">{{ exp.location }}</span>{% endif %}
+                    </div>
+                    <div class="item-right item-date">
+                        {{ exp.employment_period or (exp.date_from ~ ' - ' ~ (exp.date_to if exp.date_to else 'Present')) }}
+                    </div>
                 </div>
                 <ul>
                     {% for resp in exp.key_responsibilities %}
@@ -217,13 +245,17 @@
     {# Macro for Projects block #}
     {% macro render_projects() %}
         {% if resume.projects %}
-        <div>
-            <h2>PROJECTS</h2>
+        <div class="section">
+            <h2>TECHNICAL PROJECTS</h2>
             {% for proj in resume.projects %}
             <div class="item">
                 <div class="item-row">
-                    <div class="item-left item-title">{{ proj.name }}</div>
-                    <div class="item-right item-date">{{ proj.tech_stack or proj.link }}</div>
+                    <div class="item-left">
+                        <span class="item-title">{{ proj.name }}</span>{% if proj.tech_stack %} <span class="item-tech">| {{ proj.tech_stack }}</span>{% elif proj.link and not proj.link.startswith('http') %} <span class="item-tech">| {{ proj.link }}</span>{% endif %}
+                    </div>
+                    <div class="item-right item-date">
+                        {% if proj.github %}<a href="{{ proj.github }}">GitHub</a>{% elif proj.link and proj.link.startswith('http') %}<a href="{{ proj.link }}">Link</a>{% endif %}
+                    </div>
                 </div>
                 <ul>
                     {% if proj.description_bullets %}
@@ -257,23 +289,30 @@
         {{ render_experience() }}
     {% endif %}
 
-    {% if resume.certifications %}
-    <div>
-        <h2>CERTIFICATIONS</h2>
-        <ul>
-            {% for cert in resume.certifications %}
-            <li>{{ cert.name }} - {{ cert.description }}</li>
-            {% endfor %}
-        </ul>
+    {% if resume.education_details %}
+    <div class="section">
+        <h2>EDUCATION</h2>
+        {% for edu in resume.education_details %}
+        <div class="item">
+            <div class="item-row">
+                <div class="item-left">
+                    <span class="item-title">{{ edu.institution or edu.university }}</span> &ndash; <span class="item-subtitle">{{ edu.education_level }}{% if edu.field_of_study and edu.field_of_study not in edu.education_level %} in {{ edu.field_of_study }}{% endif %}</span>
+                </div>
+                <div class="item-right item-date">
+                    {{ edu.year_of_completion }}{% if edu.final_evaluation_grade %} | {{ edu.final_evaluation_grade }}{% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
     </div>
     {% endif %}
-    
-    {% if resume.achievements %}
-    <div>
-        <h2>ACHIEVEMENTS</h2>
-        <ul>
-            {% for ach in resume.achievements %}
-            <li><strong>{{ ach.name }}:</strong> {{ ach.description }}</li>
+
+    {% if resume.certifications %}
+    <div class="section">
+        <h2>CERTIFICATIONS</h2>
+        <ul class="cert-list">
+            {% for cert in resume.certifications %}
+            <li><strong>{{ cert.name }}</strong>{% if cert.description %} &ndash; {{ cert.description }}{% endif %}</li>
             {% endfor %}
         </ul>
     </div>

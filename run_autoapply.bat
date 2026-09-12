@@ -6,7 +6,7 @@ echo ================================================
 echo.
 
 :: 1. Navigate to your project folder
-cd /d "C:\Users\kalek\OneDrive\Desktop\Projects\AutoApply"
+cd /d "%~dp0"
 echo [1/3] Working directory: %CD%
 echo.
 
@@ -22,11 +22,11 @@ echo.
 
 :: 3. Start the Flask Backend in a new persistent window
 echo [2/3] Starting Flask Backend (port 5000)...
-start "AutoApply Backend" cmd /k "cd /d C:\Users\kalek\OneDrive\Desktop\Projects\AutoApply && echo === AutoApply Flask Backend === && echo. && python app.py & echo. & echo Backend stopped. Press any key to close. & pause"
+start "AutoApply Backend" cmd /k "cd /d "%~dp0" && echo === AutoApply Flask Backend === && echo. && python app.py & echo. & echo Backend stopped. Press any key to close. & pause"
 
 :: 3. Start the Vite Frontend in a new persistent window
 echo [3/3] Starting Vite Frontend (port 5173)...
-start "AutoApply Frontend" cmd /k "cd /d C:\Users\kalek\OneDrive\Desktop\Projects\AutoApply\frontend && echo === AutoApply Vite Frontend === && echo. && npm run dev & echo. & echo Frontend stopped. Press any key to close. & pause"
+start "AutoApply Frontend" cmd /k "cd /d "%~dp0frontend" && echo === AutoApply Vite Frontend === && echo. && npm run dev & echo. & echo Frontend stopped. Press any key to close. & pause"
 
 :: 4. Wait for both servers to be ready, then open browser
 echo.

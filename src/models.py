@@ -14,8 +14,10 @@ class Job:
     score: Optional[int] = None
     missing_skills: Optional[List[str]] = None   # Skills candidate LACKS for this role
     reasons: Optional[str] = None
+    job_summary: Optional[str] = None
     extracted_requirements: Optional[str] = None
     is_testing_role: Optional[bool] = None
     unique_id: Optional[str] = None
     tailored_resume: Optional[dict] = None
+    user_selected_skills: Optional[List[str]] = None
     tokens_used: int = 0

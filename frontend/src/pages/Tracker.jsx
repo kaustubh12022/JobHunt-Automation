@@ -204,11 +204,11 @@ export default function Tracker() {
             <select 
               value={selectedRunId} 
               onChange={e => setSelectedRunId(e.target.value)}
-              style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-panel)' }}
+              style={{ padding: '9px 16px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.25)', background: 'rgba(255, 255, 255, 0.1)', color: '#ffffff', fontWeight: 600, outline: 'none', cursor: 'pointer', colorScheme: 'light' }}
             >
-              <option value="all">All Pipeline Runs</option>
+              <option value="all" style={{ color: '#111827', background: '#ffffff', fontWeight: 600 }}>All Pipeline Runs</option>
               {runs.map(r => (
-                <option key={r.id} value={r.id}>
+                <option key={r.id} value={r.id} style={{ color: '#111827', background: '#ffffff', fontWeight: 600 }}>
                   {new Date(r.started_at).toLocaleString()} ({r.mode.toUpperCase()}) - {r.jobs_shortlisted} Resumes
                 </option>
               ))}

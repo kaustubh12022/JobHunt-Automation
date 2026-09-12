@@ -94,19 +94,19 @@ export default function MobileTrackerView({ applications, columns, onStatusChang
                           </button>
 
                           <div style={{ paddingRight: '24px' }}>
-                            <div style={{ fontWeight: 600, fontSize: '15px', marginBottom: '4px', lineHeight: 1.3 }} className="text-truncate">
+                            <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '4px', lineHeight: 1.3, color: '#111827' }} className="text-truncate">
                               {job.title}
                             </div>
-                            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }} className="text-truncate">
+                            <div style={{ fontSize: '13px', color: '#475569', marginBottom: '12px', fontWeight: 500 }} className="text-truncate">
                               {job.company}
                             </div>
                           </div>
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                              <span className="badge badge-score">{job.score || 0}/100</span>
+                              <span className="badge badge-score" style={{ background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' }}>{job.score || 0}/100</span>
                               {job.source && (
-                                <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: '#f1f5f9', color: '#475569', fontWeight: 600, textTransform: 'uppercase' }}>
+                                <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: '#f1f5f9', color: '#1e40af', fontWeight: 700, textTransform: 'uppercase' }}>
                                   {job.source.startsWith('workday-') ? 'Workday' : job.source}
                                 </span>
                               )}
@@ -116,12 +116,15 @@ export default function MobileTrackerView({ applications, columns, onStatusChang
                               value={app.status}
                               onChange={(e) => onStatusChange(app.id, e.target.value)}
                               style={{ 
-                                padding: '6px', fontSize: '12px', borderRadius: '6px', 
-                                border: `1px solid ${colors.border}`, background: colors.bg, color: colors.text, fontWeight: 500 
+                                padding: '6px 10px', fontSize: '12px', borderRadius: '6px', 
+                                border: `1px solid ${colors.border}`, background: colors.bg, color: colors.text, fontWeight: 700,
+                                colorScheme: 'light'
                               }}
                             >
                               {columns.map(c => (
-                                <option key={c.id} value={c.id}>{c.label}</option>
+                                <option key={c.id} value={c.id} style={{ color: '#111827', background: '#ffffff', fontWeight: 600 }}>
+                                  {c.label}
+                                </option>
                               ))}
                             </select>
                           </div>
