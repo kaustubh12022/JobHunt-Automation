@@ -29,21 +29,27 @@ Scoring AI). Use these as a starting compass, but always defer to
 your own deep analysis of the full JD for final tailoring decisions.
 
 === THE REFRAMING 'LENS' RULES ===
-1. Analyze the Target Role to determine the Lens (e.g., Testing, Backend, Frontend). 
-2. Select the top 1 Employment Experience and the top 2 Projects from the Master Resume that best align with this Lens. Drop all others.
-3. Rewrite the bullet points for BOTH the Experience and the Projects entirely through the Target Role Lens, highlighting matching tools, architectures, or validations.
-4. Extract ONLY the top 8 to 12 most relevant skills from the Master Resume's skill list that match this role (including a few nice-to-haves). Do NOT include the entire skill set.
+1. Analyze the Target Role to determine the Lens (e.g., QA Automation, Java Developer, .NET Developer, Full Stack Developer).
+2. Retain ALL 3 verified projects from the Master Resume (SmartApply, CampFlow, Neon-Pulse), re-ordered by relevance to the Target Role Lens. Do NOT drop any project.
+3. Rewrite the bullet points for BOTH the Experience and the 3 Projects entirely through the Target Role Lens, highlighting matching tools, architectures, testing workflows, or validations.
+4. Extract ONLY the top 8 to 12 most relevant skills from the Master Resume's skill list that match this role (including a few nice-to-haves). All skills MUST exist in the Master Resume or the candidate's confirmed additional skills list. Exactly 0 fabricated skills.
+5. The candidate is a Graduate Engineer. The Professional Summary MUST introduce the candidate as a 'Graduate Engineer' (e.g., 'Graduate Engineer specializing in...', 'Graduate Engineer skilled in...'). Never describe the candidate as a student or final-year student.
 
 === STRICT MATHEMATICAL CONSTRAINTS ===
-1. Output exactly 1 Experience item and exactly 2 Projects.
-2. Output exactly 3 bullet points per item. Maximum 20 words per bullet point.
-3. The Professional Summary must be exactly two sentences.
-4. You must organically inject the top 3 technical requirements from the Target Role into the bullet points.
-5. The 'tailored_skills' array must contain at most 12 skills.
+1. Output exactly 1 Experience item from the Master Resume with exactly 3 to 4 detailed bullet points.
+2. Retain and output ALL 3 Projects from the Master Resume with budgeted bullet points:
+   - Primary (most relevant) Project: exactly 3 to 4 bullet points.
+   - Secondary Project: exactly 3 bullet points.
+   - Tertiary Project: exactly 2 bullet points.
+   Bullet points must be between 15 and 25 words each to ensure sufficient detail.
+3. The Professional Summary must be exactly three sentences, rich in detail and highlighting core competencies, beginning by presenting the candidate as a Graduate Engineer.
+4. You must organically inject candidate skills matching the technical requirements from the Target Role into the bullet points.
+5. The 'tailored_skills' array must contain between 12 and 16 skills.
 
 === NEGATIVE PROMPTING ===
 - Do NOT use weak filler verbs (e.g., 'Worked on', 'Assisted in'). Every bullet must start with a powerful action verb (e.g., Engineered, Orchestrated, Architected).
-- Do NOT hallucinate skills or companies. Only use factual data present in the Master Resume.
+- Do NOT hallucinate skills or companies. Only use factual data present in the Master Resume or candidate's confirmed additional skills.
+- Do NOT refer to the candidate as a 'student', 'final-year student', or 'engineering student'. The candidate is a Graduate Engineer.
 - Return RAW JSON ONLY.
 
 === REQUIRED JSON SCHEMA ===

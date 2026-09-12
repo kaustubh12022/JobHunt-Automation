@@ -41,31 +41,50 @@ def generate_pdf(job: Job, tailored_resume: dict, date_str: str, page) -> str:
     try:
         page.set_content(html_out)
         
-        # Inject JavaScript to dynamically scale content if max_pages = 1
-        max_pages = config.get('resume', {}).get('max_pages', 1)
-        if max_pages == 1:
-            page.evaluate("""
-                const A4_HEIGHT_PX = 1100; // slightly under A4 to be safe
-                let scrollHeight = document.documentElement.scrollHeight;
-                if (scrollHeight > A4_HEIGHT_PX) {
-                    let scaleFactor = A4_HEIGHT_PX / scrollHeight;
-                    // Cap scaling at 0.85 to preserve readability
-                    if (scaleFactor < 0.80) scaleFactor = 0.80; 
-                    document.body.style.transform = `scale(${scaleFactor})`;
-                    document.body.style.transformOrigin = 'top left';
-                    document.body.style.width = `${100 / scaleFactor}%`;
-                }
-            """)
-
         page.pdf(
             path=str(pdf_path),
             format="A4",
             print_background=True,
-            margin={"top": "0in", "right": "0in", "bottom": "0in", "left": "0in"} # Margins handled by CSS
+            margin={"top": "0in", "right": "0in", "bottom": "0in", "left": "0in"}  # Margins handled by CSS
         )
             
         logger.info(f"   ✅ Saved: {pdf_filename}")
         return str(pdf_path)
     except Exception as e:
         logger.error(f"   ❌ Error generating PDF for {job.company}: {e}")
+        return ""
+
+
+def generate_resume_pdf(tailored_resume: dict, output_path: str, job: Job = None) -> str:
+    """
+    Generate a 1-page ATS-friendly PDF resume directly to output_path.
+    Creates its own Playwright browser session for standalone execution.
+    """
+    out_file = Path(output_path)
+    out_file.parent.mkdir(parents=True, exist_ok=True)
+
+    templates_dir = Path(__file__).parent.parent / "templates"
+    env = Environment(loader=FileSystemLoader(str(templates_dir)))
+    template = env.get_template("resume_template.html")
+
+    html_out = template.render(resume=tailored_resume, job=job)
+
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
+            try:
+                page.set_content(html_out)
+                page.pdf(
+                    path=str(out_file),
+                    format="A4",
+                    print_background=True,
+                    margin={"top": "0in", "right": "0in", "bottom": "0in", "left": "0in"}
+                )
+                logger.info(f"   ✅ Saved: {out_file.name}")
+                return str(out_file)
+            finally:
+                browser.close()
+    except Exception as e:
+        logger.error(f"   ❌ Error generating standalone PDF: {e}")
         return ""

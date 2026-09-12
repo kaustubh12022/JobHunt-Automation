@@ -1,0 +1,23 @@
+@echo off
+echo Installing numpy first (to satisfy jobspy dependency without building from source)...
+pip install "numpy>=2.0" -q
+if errorlevel 1 (
+    echo Trying numpy stable...
+    pip install numpy -q
+)
+
+echo Installing python-jobspy without deps (avoids numpy build)...
+pip install "python-jobspy>=1.1.48" --no-deps -q
+
+echo Installing all other dependencies...
+pip install "pandas>=2.2.0" "openpyxl>=3.1.2" "Jinja2>=3.1.3" "playwright>=1.44.0" "beautifulsoup4>=4.12.0" "pyyaml>=6.0.1" "loguru>=0.7.2" "flask>=3.0.0" supabase python-dotenv "flask-cors>=4.0.0" tqdm requests -q
+
+echo Installing jobspy remaining deps (currency-converter, etc.)...
+pip install currency-converter -q
+
+echo Checking playwright browsers...
+playwright install chromium --quiet
+
+echo Done!
+echo Verifying imports...
+python -c "import jobspy; import pandas; import flask; import loguru; import yaml; print('All core imports OK')"

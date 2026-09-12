@@ -24,24 +24,24 @@ function ScanView({ state }) {
     <div className="glass-panel" style={{ padding: '24px', maxWidth: '800px', margin: '20px auto', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div style={{ maxWidth: '70%' }}>
-          <h2 style={{ margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h2 style={{ margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: '8px', color: '#ffffff', fontWeight: 700 }}>
             <Activity size={24} color="var(--primary)" /> Scraping Jobs
           </h2>
-          <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '14px' }}>{statusText}</p>
+          <p style={{ margin: 0, color: '#e2e8f0', fontSize: '15px', fontWeight: 500 }}>{statusText}</p>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '32px', fontWeight: 'bold', color: 'var(--primary)' }}>{state.scan_data?.total_found || 0}</div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Found</div>
+          <div style={{ fontSize: '36px', fontWeight: 800, color: '#60a5fa', lineHeight: 1 }}>{state.scan_data?.total_found || 0}</div>
+          <div style={{ fontSize: '12px', color: '#cbd5e1', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em', marginTop: '4px' }}>Found</div>
         </div>
       </div>
       
-      <div style={{ flex: 1, overflowY: 'auto', borderRadius: '8px', border: '1px solid var(--border-color)', maxHeight: '400px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', maxHeight: '400px' }}>
         <table className="data-table">
-          <thead style={{ background: '#f1f5f9', position: 'sticky', top: 0, zIndex: 1 }}>
+          <thead style={{ background: 'rgba(25, 25, 35, 0.98)', position: 'sticky', top: 0, zIndex: 1, borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
             <tr>
-              <th>Job Title</th>
-              <th className="desktop-only">Company</th>
-              <th className="desktop-only">Platform</th>
+              <th style={{ color: '#f8fafc', fontWeight: 700 }}>Job Title</th>
+              <th className="desktop-only" style={{ color: '#f8fafc', fontWeight: 700 }}>Company</th>
+              <th className="desktop-only" style={{ color: '#f8fafc', fontWeight: 700 }}>Platform</th>
             </tr>
           </thead>
           <tbody>
@@ -54,12 +54,12 @@ function ScanView({ state }) {
                   exit={{ opacity: 0 }}
                 >
                   <td style={{ maxWidth: '200px' }}>
-                    <div style={{ fontWeight: 500 }} className="text-truncate">{job.title}</div>
-                    <div className="mobile-only text-truncate" style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{job.company} • {job.platform}</div>
+                    <div style={{ fontWeight: 700, color: '#ffffff' }} className="text-truncate">{job.title}</div>
+                    <div className="mobile-only text-truncate" style={{ fontSize: '12px', color: '#cbd5e1', marginTop: '2px', fontWeight: 500 }}>{job.company} • {job.platform}</div>
                   </td>
-                  <td className="desktop-only text-truncate" style={{ maxWidth: '150px' }}>{job.company}</td>
+                  <td className="desktop-only text-truncate" style={{ maxWidth: '150px', color: '#e2e8f0', fontWeight: 500 }}>{job.company}</td>
                   <td className="desktop-only">
-                    <span style={{ padding: '4px 8px', background: '#e2e8f0', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' }}>
+                    <span style={{ padding: '4px 10px', background: 'rgba(59, 130, 246, 0.2)', color: '#93c5fd', border: '1px solid rgba(59, 130, 246, 0.4)', borderRadius: '6px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.04em' }}>
                       {job.platform?.toUpperCase()}
                     </span>
                   </td>
@@ -83,22 +83,22 @@ function ScoreView({ state }) {
     <div className="glass-panel" style={{ padding: '24px', maxWidth: '800px', margin: '20px auto', display: 'flex', flexDirection: 'column' }}>
       <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ maxWidth: '70%' }}>
-          <h2 style={{ margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h2 style={{ margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '8px', color: '#ffffff', fontWeight: 700 }}>
             <Activity size={24} color="var(--primary)" /> AI Evaluation
           </h2>
-          <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '14px' }}>{cleanStatus(state.status_text)}</p>
+          <p style={{ margin: 0, color: '#e2e8f0', fontSize: '15px', fontWeight: 500 }}>{cleanStatus(state.status_text)}</p>
         </div>
-        <div style={{ fontSize: '28px', fontWeight: 'bold' }}>
+        <div style={{ fontSize: '32px', fontWeight: 800 }}>
           <span style={{ color: 'var(--primary)' }}>{state.score_data?.scored || 0}</span>
         </div>
       </div>
-      <div style={{ flex: 1, overflowY: 'auto', borderRadius: '8px', border: '1px solid var(--border-color)', maxHeight: '400px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', maxHeight: '400px' }}>
         <table className="data-table">
-          <thead style={{ background: '#f1f5f9', position: 'sticky', top: 0, zIndex: 1 }}>
+          <thead style={{ background: 'rgba(25, 25, 35, 0.98)', position: 'sticky', top: 0, zIndex: 1, borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
             <tr>
-              <th>Status</th>
-              <th>Job Info</th>
-              <th style={{ textAlign: 'right' }}>Score</th>
+              <th style={{ color: '#f8fafc', fontWeight: 700 }}>Status</th>
+              <th style={{ color: '#f8fafc', fontWeight: 700 }}>Job Info</th>
+              <th style={{ textAlign: 'right', color: '#f8fafc', fontWeight: 700 }}>Score</th>
             </tr>
           </thead>
           <tbody>
@@ -108,10 +108,10 @@ function ScoreView({ state }) {
                   {s.status === 'scoring' ? <Loader2 size={16} className="spin" color="var(--warning)" /> : <CheckCircle size={16} color={s.score >= 50 ? 'var(--success)' : 'var(--danger)'} />}
                 </td>
                 <td style={{ maxWidth: '200px' }}>
-                  <div style={{ fontWeight: 600 }} className="text-truncate">{s.title}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }} className="text-truncate">{s.company}</div>
+                  <div style={{ fontWeight: 700, color: '#ffffff' }} className="text-truncate">{s.title}</div>
+                  <div style={{ fontSize: '12px', color: '#cbd5e1', marginTop: '2px', fontWeight: 500 }} className="text-truncate">{s.company}</div>
                 </td>
-                <td style={{ textAlign: 'right', fontWeight: 'bold', color: s.score >= 50 ? 'var(--success)' : 'var(--danger)' }}>
+                <td style={{ textAlign: 'right', fontWeight: 'bold', color: s.score >= 50 ? '#34d399' : '#f87171' }}>
                   {s.status === 'scoring' ? '--' : `${s.score}%`}
                 </td>
               </tr>

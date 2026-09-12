@@ -33,27 +33,178 @@ def _scrape_with_retry(kwargs: dict, max_retries: int = 3, backoff: float = 5.0)
                 import pandas as pd
                 return pd.DataFrame()
 
+import html
+import urllib.parse
+
 from src.logger import logger
 from src.models import Job
 from src.config_loader import load_config
 from src.scrapers.workday import scrape_workday
 from src.scrapers.jsonld import scrape_jsonld
+from src.scorer import is_relevant_jd, matches_senior_title, requires_3_plus_years
+
+
+TRACKING_PARAMS = {
+    'refid', 'trackingid', 'tracking_id', 'trk', 'trkcampaign',
+    'midtoken', 'fbclid', 'gclid', 'msclkid', 'mc_cid', 'mc_eid',
+    '_ga', '_gl'
+}
+
+
+def normalize_url(url: str) -> str:
+    """
+    Normalizes a job URL for deduplication and storage:
+    - Strips tracking query parameters (utm_*, refId, trackingId, trk, etc.)
+    - Removes trailing slashes
+    - Preserves functional query parameters like 'jk' on Indeed.
+    """
+    if not url or not isinstance(url, str):
+        return ""
+    url = url.strip()
+    try:
+        parsed = urllib.parse.urlparse(url)
+        if not parsed.scheme or not parsed.netloc:
+            return url
+        # Filter query params
+        query_pairs = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
+        filtered_pairs = [
+            (k, v) for k, v in query_pairs
+            if not k.lower().startswith('utm_') and k.lower() not in TRACKING_PARAMS
+        ]
+        new_query = urllib.parse.urlencode(filtered_pairs)
+        path = parsed.path.rstrip('/')
+        normalized = urllib.parse.urlunparse((
+            parsed.scheme,
+            parsed.netloc.lower(),
+            path,
+            parsed.params,
+            new_query,
+            ''  # strip fragment
+        ))
+        return normalized
+    except Exception:
+        return url
 
 
 def clean_html(desc: str) -> str:
-    """Strip HTML tags from a description string."""
+    """
+    Clean and strip HTML tags from a job description string while preserving
+    newlines, paragraphs, and list formatting.
+    """
     if not desc:
         return ""
-    desc = re.sub(r'<[^>]+>', '', str(desc))
-    desc = re.sub(r'\s+', ' ', desc)
-    return desc.strip()
+    desc_str = str(desc)
+
+    # Replace break and list tags with newlines / bullet points
+    desc_str = re.sub(r'(?i)<br\s*/?>', '\n', desc_str)
+    desc_str = re.sub(r'(?i)<li[^>]*>', '\n- ', desc_str)
+    desc_str = re.sub(r'(?i)</?(?:p|div|li|tr|h[1-6]|blockquote|section|article)[^>]*>', '\n', desc_str)
+
+    # Remove remaining HTML tags
+    desc_str = re.sub(r'<[^>]+>', '', desc_str)
+
+    # Unescape HTML entities (e.g. &amp;, &lt;, &nbsp;)
+    desc_str = html.unescape(desc_str)
+
+    # Normalize horizontal whitespace (spaces, tabs) to single spaces per line
+    desc_str = re.sub(r'[^\S\r\n]+', ' ', desc_str)
+    # Normalize excessive newlines (keep at most 2 consecutive newlines)
+    desc_str = re.sub(r'\n\s*\n\s*\n+', '\n\n', desc_str)
+
+    return desc_str.strip()
 
 
-def apply_pandas_filter(jobs: list[Job], locations: list[str], callbacks=None, test_mode=False) -> list[Job]:
-    """Applies the strict 24-hour freshness, location, and anti-senior filters."""
+LOCATION_ALIASES = {
+    "pune": [
+        r"\bpune\b",
+        r"\bmaharashtra\b",
+        r"\bmh\b",
+        r"\bin-mh\b",
+        r"\bmh,\s*in\b",
+    ],
+    "mumbai": [
+        r"\bmumbai\b",
+        r"\bbombay\b",
+        r"\bnavi\s+mumbai\b",
+        r"\bthane\b",
+        r"\bmaharashtra\b",
+        r"\bmh\b",
+        r"\bin-mh\b",
+        r"\bmh,\s*in\b",
+    ],
+    "bangalore": [
+        r"\bbangalore\b",
+        r"\bbengaluru\b",
+        r"\bkarnataka\b",
+        r"\bka\b",
+        r"\bin-ka\b",
+        r"\bka,\s*in\b",
+    ],
+    "bengaluru": [
+        r"\bbangalore\b",
+        r"\bbengaluru\b",
+        r"\bkarnataka\b",
+        r"\bka\b",
+        r"\bin-ka\b",
+        r"\bka,\s*in\b",
+    ],
+    "delhi": [
+        r"\bdelhi\b",
+        r"\bnew\s+delhi\b",
+        r"\bncr\b",
+        r"\bnoida\b",
+        r"\bgurgaon\b",
+        r"\bgurugram\b",
+    ],
+    "hyderabad": [
+        r"\bhyderabad\b",
+        r"\btelangana\b",
+        r"\bts\b",
+    ],
+    "chennai": [
+        r"\bchennai\b",
+        r"\btamil\s*nadu\b",
+        r"\btn\b",
+    ],
+}
+
+REMOTE_PATTERNS = [
+    r"\bremote\b",
+    r"\bhybrid\b",
+    r"\bwork\s+from\s+home\b",
+    r"\bwfh\b",
+    r"\banywhere\b",
+    r"\bpan[- ]?india\b",
+]
+
+
+def build_location_regex(locations: list[str]) -> str:
+    """Build a comprehensive regex pattern covering target cities, regional aliases, and remote options."""
+    patterns = list(REMOTE_PATTERNS)
+    for loc in locations:
+        loc_clean = loc.strip().lower()
+        if loc_clean in LOCATION_ALIASES:
+            patterns.extend(LOCATION_ALIASES[loc_clean])
+        else:
+            matched = False
+            for k, aliases in LOCATION_ALIASES.items():
+                if k in loc_clean:
+                    patterns.extend(aliases)
+                    matched = True
+            if not matched:
+                patterns.append(r"\b" + re.escape(loc_clean) + r"\b")
+    unique_patterns = list(dict.fromkeys(patterns))
+    return "|".join(f"(?:{p})" for p in unique_patterns)
+
+
+def apply_pandas_filter(jobs: list[Job], locations: list[str], callbacks=None, test_mode=False, hours_old: int = None) -> list[Job]:
+    """
+    Applies recall-first freshness, location regional aliases, anti-senior,
+    experience, and robust deduplication filters.
+    """
     if not jobs:
         return []
-        
+
     # Convert list of Job objects to DataFrame for filtering
     data = []
     for j in jobs:
@@ -66,43 +217,45 @@ def apply_pandas_filter(jobs: list[Job], locations: list[str], callbacks=None, t
             "url": j.url,
             "source": j.source,
             "job_type": getattr(j, "job_type", "fulltime"),
-            "date_posted": getattr(j, "date_posted", pd.Timestamp.now(tz="UTC")), # Default to now for api scrapers if missing
+            "date_posted": getattr(j, "date_posted", None),
             "is_remote": getattr(j, "is_remote", False)
         })
-    
+
     combined_df = pd.DataFrame(data)
     before_count = len(combined_df)
-    
+
     # 1. Drop null/empty descriptions
     combined_df = combined_df.dropna(subset=['description'])
     combined_df = combined_df[combined_df['description'].str.strip().astype(bool)]
 
-    # 2. Recency Safety Net (Hard filter: STRICTLY 24h only)
+    # 2. Freshness Safety Net: respect configured hours_old (default 72h)
+    # CRITICAL: Keep jobs with missing/NaN date_posted (do NOT drop them)
     if 'date_posted' in combined_df.columns:
         combined_df['date_posted'] = pd.to_datetime(combined_df['date_posted'], errors='coerce', utc=True)
-        no_date_mask = combined_df['date_posted'].isna()
-        combined_df = combined_df[~no_date_mask]
-        
-        # Hard 24-hour cutoff
-        cutoff = pd.Timestamp.now(tz='UTC') - pd.Timedelta(hours=24)
-        stale_mask = combined_df['date_posted'] < cutoff
-        
+        if hours_old is None:
+            config = load_config()
+            hours_old = config.get('search', {}).get('hours_old', 72)
+        cutoff = pd.Timestamp.now(tz='UTC') - pd.Timedelta(hours=hours_old)
+
+        # Only drop if date is parseable AND older than cutoff
+        stale_mask = combined_df['date_posted'].notna() & (combined_df['date_posted'] < cutoff)
+
         stale_count = stale_mask.sum()
         if stale_count > 0:
-            logger.info(f"   [Stale] Dropped {stale_count} stale jobs (older than 24h)")
+            logger.info(f"   [Stale] Dropped {stale_count} stale jobs (older than {hours_old}h)")
             if callbacks and "on_job_dropped" in callbacks:
                 for _, row in combined_df[stale_mask].iterrows():
-                    callbacks["on_job_dropped"](row.get("title"), row.get("company"), "Stale (older than 24h)")
+                    callbacks["on_job_dropped"](row.get("title"), row.get("company"), f"Stale (older than {hours_old}h)")
         combined_df = combined_df[~stale_mask]
 
-    # 3. Location Filter (Target cities OR Remote)
+    # 3. Location Filter: Target cities with comprehensive Indian regional aliases OR Remote/Hybrid
     if 'location' in combined_df.columns and locations:
-        location_pattern = '|'.join(re.escape(loc) for loc in locations)
+        location_pattern = build_location_regex(locations)
         is_remote_mask = pd.Series(False, index=combined_df.index)
         if 'is_remote' in combined_df.columns:
             is_remote_mask = combined_df['is_remote'] == True
-            
-        loc_mask = combined_df['location'].str.contains(location_pattern, case=False, na=False) | is_remote_mask
+
+        loc_mask = combined_df['location'].astype(str).str.contains(location_pattern, case=False, na=False) | is_remote_mask
         dropped_loc = (~loc_mask).sum()
         if dropped_loc > 0:
             logger.info(f"   [Location] Dropped {dropped_loc} jobs with mismatched locations (not in target cities or remote)")
@@ -111,14 +264,9 @@ def apply_pandas_filter(jobs: list[Job], locations: list[str], callbacks=None, t
                     callbacks["on_job_dropped"](row.get("title"), row.get("company"), "Location mismatch")
         combined_df = combined_df[loc_mask]
 
-    # 4. Anti-Senior Title Filter & Experience Filter
-    # NOTE: This runs in BOTH test mode and production. Filtering junk jobs in test
-    # mode is essential to avoid wasting AI tokens.
+    # 4. Anti-Senior Title Filter (with explicit title experience checking)
     if 'title' in combined_df.columns:
-        senior_mask = combined_df['title'].str.contains(
-            r'senior|sr[\.,\s]|lead|manager|principal|director|head|vp|president|experienced|architect|staff|expert',
-            case=False, na=False, regex=True
-        )
+        senior_mask = combined_df['title'].apply(matches_senior_title).astype(bool)
         dropped_df = combined_df[senior_mask]
         dropped_senior = len(dropped_df)
         combined_df = combined_df[~senior_mask]
@@ -128,101 +276,9 @@ def apply_pandas_filter(jobs: list[Job], locations: list[str], callbacks=None, t
                 if callbacks and "on_job_dropped" in callbacks:
                     callbacks["on_job_dropped"](row.get("title"), row.get("company"), "Senior title detected")
 
+    # 5. Candidate Experience Filter (0-2 / 1-3 years preserved; 3+ years rejected)
     if 'description' in combined_df.columns:
-        def requires_3_plus_years(desc):
-            """
-            Returns True if the JD requires 3+ years of CANDIDATE experience.
-
-            Key safeguards:
-            - Strips sentences that mention "our team has X years", "work with engineers 
-              who have X years", etc. — these are team/company experience, not candidate requirements.
-            - Checks UPPER bound of ranges: "2-5 years" -> upper=5 -> FILTER.
-            - Handles "3 or more years", "more than 3 years".
-            - Handles "(2-5 years)" and "2 - 5 years" (spaced ranges).
-            - Never filters purely on 0-2 year ranges or non-candidate context.
-            """
-            if not isinstance(desc, str): return False
-            desc_lower = desc.lower().replace('\\', '')
-
-            # ── Step 1: Remove sentences about COMPANY/TEAM experience ──
-            # These phrases indicate the experience belongs to others, not the candidate.
-            # We strip the whole sentence before running numeric checks.
-            third_party_prefixes = (
-                r'(?:our|the)\s+team\s+(?:has|have|with|of)',
-                r'(?:work|working)\s+(?:with|alongside|beside|among)',
-                r'(?:join|joining)\s+(?:a\s+)?team\s+(?:of|with)',
-                r'(?:founded|established|started|operating|running)\s+(?:in|since|for)',
-                r'(?:we\s+have|company\s+has|firm\s+has)\s+(?:over|more\s+than|been)',
-                r'(?:our\s+company|our\s+firm|our\s+organisation)\s+(?:has|have)',
-                r'colleagues?\s+(?:with|who\s+have)',
-                r'mentors?\s+(?:with|who\s+have)',
-                r'mentorship\s+from',
-                r'(?:learn|learning)\s+from',
-                r'(?:combined|collective|total)\s+experience',
-                r'(?:history|heritage|industry)\s+(?:of|spanning)',
-                # Only strip "team of engineers with X years" - NOT bare "developer with X"
-                r'(?:team|group|pool)\s+of\s+(?:engineers?|developers?|professionals?)\s+with',
-                r'(?:senior\s+)?engineers?\s+(?:who\s+have|with\s+over)',
-            )
-            # Split into sentences and strip those matching third-party patterns
-            sentences = re.split(r'(?<=[.!?\n])\s*', desc_lower)
-            candidate_sentences = []
-            for sent in sentences:
-                is_third_party = any(re.search(pat, sent) for pat in third_party_prefixes)
-                if not is_third_party:
-                    candidate_sentences.append(sent)
-            
-            candidate_text = ' '.join(candidate_sentences)
-
-            # ── Step 2: Apply numeric checks on candidate_text only ──
-
-            # Pattern 1: Range (X-Y years) -> check UPPER bound
-            # Catches: "2-5 years", "2 to 5 years", "2 - 5 years", "(2-5 years)"
-            range_pattern = r'(\d+)\s*[-\u2013to]+\s*(\d+)\s*(?:years?|yrs?\.?)'
-            for m in re.finditer(range_pattern, candidate_text):
-                lo, hi = int(m.group(1)), int(m.group(2))
-                if hi >= 3:
-                    return True
-
-            # Pattern 2: Single number + "years", with optional "or more"/"+"
-            # Catches: "3 years", "5+ years", "3 or more years", "more than 3 years"
-            single_pattern = r'(\d+)\s*(?:\+|or more|more than)?\s*(?:years?|yrs?\.?)'
-            for m in re.finditer(single_pattern, candidate_text):
-                num = int(m.group(1))
-                if 3 <= num <= 25:
-                    return True
-
-            # Pattern 3: "minimum/at least X years"
-            min_pattern = r'(?:minimum|at least|minimum of|at\s*least)\s+(?:of\s+)?(\d+)\s*(?:years?|yrs?\.?)?'
-            for m in re.finditer(min_pattern, candidate_text):
-                num = int(m.group(1))
-                if 3 <= num <= 25:
-                    return True
-
-            # Pattern 4: "X yrs" shorthand
-            yrs_pattern = r'\b(\d+)\s+yrs?\b'
-            for m in re.finditer(yrs_pattern, candidate_text):
-                num = int(m.group(1))
-                if 3 <= num <= 25:
-                    return True
-
-            # Pattern 5: Word-based ("three to five years")
-            words_to_num = {
-                'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7,
-                'eight': 8, 'nine': 9, 'ten': 10, 'eleven': 11, 'twelve': 12
-            }
-            words_list = '|'.join(words_to_num.keys())
-            word_pattern = fr'\b({words_list})\s*(?:to|-|or more)?\s*(?:\w+\s+)?years?\b'
-            for m in re.finditer(word_pattern, candidate_text):
-                if words_to_num.get(m.group(1), 0) >= 3:
-                    return True
-
-            return False
-
-        # Filter experience for ALL jobs (both fulltime and internship)
-        # Internships requiring 3+ years of experience are mislabeled or senior roles and should be dropped.
         exp_mask = combined_df['description'].apply(requires_3_plus_years).astype(bool)
-        
         dropped_exp = exp_mask.sum()
         if dropped_exp > 0:
             logger.info(f"   [Experience] Dropped {dropped_exp} jobs requiring 3+ years of experience")
@@ -231,14 +287,36 @@ def apply_pandas_filter(jobs: list[Job], locations: list[str], callbacks=None, t
                     callbacks["on_job_dropped"](row.get("title"), row.get("company"), "High experience required")
         combined_df = combined_df[~exp_mask]
 
-    # 5. Deduplicate (Job URL + Fallback to Title/Company)
+    # 6. Robust Deduplication (Job URL + Known Company/Title)
     before_dedup = len(combined_df)
-    url_col = 'url'
-    if url_col in combined_df.columns:
-        combined_df = combined_df.drop_duplicates(subset=[url_col], keep='first')
-        
+
+    # 6a. Normalize URLs and deduplicate by normalized URL
+    if 'url' in combined_df.columns:
+        combined_df['normalized_url'] = combined_df['url'].apply(normalize_url)
+        has_url_mask = combined_df['normalized_url'].astype(str).str.strip().astype(bool)
+        with_url = combined_df[has_url_mask].drop_duplicates(subset=['normalized_url'], keep='first')
+        without_url = combined_df[~has_url_mask]
+        combined_df = pd.concat([with_url, without_url], ignore_index=True)
+
+    # 6b. Deduplicate by (clean_title, company) ONLY when company is known
+    # Prevents dropping unique jobs with "Unknown" or empty company names
     if 'title' in combined_df.columns and 'company' in combined_df.columns:
-        combined_df = combined_df.drop_duplicates(subset=['title', 'company'], keep='first')
+        unknown_companies = {'', 'unknown', 'none', 'nan', 'null', 'n/a'}
+        is_unknown = (
+            combined_df['company'].isna() |
+            combined_df['company'].fillna('').astype(str).str.strip().str.lower().isin(unknown_companies)
+        )
+        is_known_company = ~is_unknown
+
+        known_df = combined_df[is_known_company].copy()
+        unknown_df = combined_df[~is_known_company].copy()
+
+        known_df['clean_title_dedup'] = known_df['title'].astype(str).str.strip().str.lower()
+        known_df['clean_company_dedup'] = known_df['company'].astype(str).str.strip().str.lower()
+        known_deduped = known_df.drop_duplicates(subset=['clean_title_dedup', 'clean_company_dedup'], keep='first')
+
+        combined_df = pd.concat([known_deduped, unknown_df], ignore_index=True)
+        combined_df = combined_df.drop(columns=['clean_title_dedup', 'clean_company_dedup', 'normalized_url'], errors='ignore')
 
     dropped_dedup = before_dedup - len(combined_df)
     if dropped_dedup > 0:
@@ -246,8 +324,8 @@ def apply_pandas_filter(jobs: list[Job], locations: list[str], callbacks=None, t
 
     after_count = len(combined_df)
     logger.info(f"   [Filter] Pre-filter: {before_count} → {after_count} jobs ({before_count - after_count} dropped)")
-    
-    # Convert back to Job objects
+
+    # Convert back to Job objects, preserving date_posted and is_remote
     filtered_jobs = []
     for _, row in combined_df.iterrows():
         job = Job(
@@ -260,13 +338,14 @@ def apply_pandas_filter(jobs: list[Job], locations: list[str], callbacks=None, t
             source=str(row.get("source")),
             job_type=str(row.get("job_type"))
         )
-        # Preserve original date_posted if needed, but not part of model right now
+        job.date_posted = row.get("date_posted")
+        job.is_remote = row.get("is_remote", False)
         filtered_jobs.append(job)
-        
+
     return filtered_jobs
 
 
-def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=False, callbacks=None) -> list[Job]:
+def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=False, callbacks=None, stop_event=None) -> list[Job]:
     """
     Scrapes jobs from all sources, handling Full-Time and Internship blocks separately.
     """
@@ -277,7 +356,7 @@ def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=Fals
     locations = search_cfg.get('locations', ["Pune"])
     job_types = selected_job_types if selected_job_types is not None else search_cfg.get('job_types', ["fulltime", "internship"])
     proxies = search_cfg.get('proxies', [])
-    hours_old = search_cfg.get('hours_old', 24)
+    hours_old = search_cfg.get('hours_old', 72)
 
     platforms = selected_platforms if selected_platforms is not None else search_cfg.get('platforms', ["linkedin", "indeed"])
     
@@ -297,17 +376,23 @@ def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=Fals
     batched_location = ", ".join(locations)  # e.g. "Pune, Mumbai, Bangalore"
     logger.info(f"📊 Session limit: {results_wanted_per_loc}/loc × {len(locations)} locs = {results_wanted_batched} results per batched call")
     for jt in job_types:
+        if stop_event and stop_event.is_set():
+            break
         jobspy_plats = [p for p in platforms if p not in ["workday", "jsonld"]]
         if jt == "internship" and "linkedin" in jobspy_plats:
-            jobspy_plats = [p for p in jobspy_plats if p != "linkedin"]
+            jobspy_plats.remove("linkedin")
         if jobspy_plats:
-            combos = len(search_terms)  # One call per term (locations batched)
-            if test_mode:
-                combos = 1
-            global_total_cycles += combos
+            global_total_cycles += len(search_terms) if not test_mode else 1
+        if "workday" in platforms:
+            global_total_cycles += 1
+        if "jsonld" in platforms:
+            global_total_cycles += 1
     
     for jt in job_types:
-        logger.info(f"   [Start] Starting collection block for Job Type: {jt.upper()}")
+        if stop_event and stop_event.is_set():
+            logger.info("🛑 Scraper cancelled by stop_event.")
+            break
+        logger.info(f"⚡ Processing Job Category: {jt.upper()}")
         
         # 1. JobSpy Module
         jobspy_platforms = [p for p in platforms if p not in ["workday", "jsonld"]]
@@ -325,6 +410,8 @@ def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=Fals
             combinations = list(search_terms) if not test_mode else [random.choice(search_terms)]
                 
             for i, term in enumerate(combinations, 1):
+                if stop_event and stop_event.is_set():
+                    break
                 global_cycle_counter += 1
                 cycle_label = f"Cycle {global_cycle_counter}/{global_total_cycles}: JobSpy - {term} ({jt})"
                 
@@ -342,6 +429,7 @@ def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=Fals
                 def do_scrape(site_list, scrape_loc, results_per_call):
                     """Fire one JobSpy call and collect results into all_raw_jobs."""
                     if not site_list: return
+                    if stop_event and stop_event.is_set(): return
                     try:
                         df = _scrape_with_retry({
                             "site_name": site_list,
@@ -356,15 +444,17 @@ def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=Fals
                         })
                         if not df.empty:
                             for _, row in df.iterrows():
+                                if stop_event and stop_event.is_set(): break
                                 desc = clean_html(row.get("description", ""))
                                 if not desc: continue
+                                raw_url = str(row.get("job_url", row.get("url", "")))
                                 job = Job(
                                     id=str(uuid.uuid4()),
                                     title=str(row.get("title", "Unknown")),
                                     company=str(row.get("company", "Unknown")),
                                     location=str(row.get("location", "Unknown")),
                                     description=desc,
-                                    url=str(row.get("job_url", row.get("url", ""))),
+                                    url=normalize_url(raw_url) if raw_url else "",
                                     source=str(row.get("site", "jobspy")),
                                     job_type=jt
                                 )
@@ -386,6 +476,7 @@ def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=Fals
                 # ── Indeed / others: one call per location (no inter-location delay) ──
                 if per_loc_sites:
                     for individual_loc in locations:
+                        if stop_event and stop_event.is_set(): break
                         logger.info(f"   [{'/'.join(per_loc_sites):10s}] | {term} | {individual_loc} | {results_wanted_per_loc} results")
                         do_scrape(per_loc_sites, individual_loc, results_wanted_per_loc)
                 
@@ -396,7 +487,11 @@ def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=Fals
                             "wait_time": int(delay),
                             "message": f"⏳ Waiting {int(delay)}s before next term..."
                         })
-                    time.sleep(delay)
+                    if stop_event:
+                        if stop_event.wait(delay):
+                            break
+                    else:
+                        time.sleep(delay)
                 
         # 2. Workday Module
         if "workday" in platforms:
@@ -409,7 +504,7 @@ def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=Fals
                 workday_queries = [f"{q} intern" for q in search_terms] + ["intern", "internship"]
                 
             try:
-                wd_jobs = scrape_workday(queries=workday_queries, test_mode=test_mode, max_results_per_query=results_wanted)
+                wd_jobs = scrape_workday(queries=workday_queries, test_mode=test_mode, max_results_per_query=results_wanted_per_loc)
                 for w_job in wd_jobs:
                     w_job.job_type = jt
                     w_job.date_posted = pd.Timestamp.now(tz="UTC") # Workday API may not provide exact date in simple JSON, assume fresh
@@ -440,7 +535,7 @@ def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=Fals
                     callbacks["on_error"](str(e))
 
     # Finally, apply the strict Pandas filters
-    filtered_jobs = apply_pandas_filter(all_raw_jobs, locations, callbacks=callbacks, test_mode=test_mode)
+    filtered_jobs = apply_pandas_filter(all_raw_jobs, locations, callbacks=callbacks, test_mode=test_mode, hours_old=hours_old)
     
     stats = {
         "found_initial": len(all_raw_jobs),

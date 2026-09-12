@@ -1,6 +1,6 @@
 import sys
 import traceback
-from loguru import logger
+from src.logger import logger
 from src.scraper import run_scraper
 from src.scorer import score_jobs
 from src.config_loader import get_human_date_str
@@ -18,20 +18,83 @@ if sys.platform == "win32":
 
 def main():
     parser = argparse.ArgumentParser(description="Run Headless AutoApply Pipeline")
-    parser.add_argument("--test", action="store_true", help="Run in test mode (fast scrape, 1 combo, minimal scoring)")
+    parser.add_argument("--test-mode", "--test", action="store_true", dest="test_mode", help="Run in test mode (fast scrape, 1 combo, minimal scoring)")
     parser.add_argument("--dry-run", action="store_true", help="Run without generating PDFs or sending emails, logging to audit.log")
     args = parser.parse_args()
-    test_mode = args.test
+    
+    config = load_config()
+    test_mode = args.test_mode or config.get('test_mode', {}).get('enabled', False)
     dry_run = args.dry_run
 
     logger.info("🚀 Starting Headless AutoApply Pipeline..." + (" [TEST MODE]" if test_mode else "") + (" [DRY RUN]" if dry_run else ""))
-    platforms = ["linkedin", "indeed"]
+    
+    # Ensure 72h freshness from config is respected during pipeline runs
+    import pandas as pd
+    import src.scraper as scraper_module
+    hours_old = config.get('search', {}).get('hours_old', 72)
+    orig_apply_pandas_filter = scraper_module.apply_pandas_filter
+
+    def m1_apply_pandas_filter(jobs, locations, callbacks=None, test_mode=False):
+        now = pd.Timestamp.now(tz='UTC')
+        cutoff_72 = now - pd.Timedelta(hours=hours_old)
+        saved_dates = {}
+        for j in jobs:
+            dp = getattr(j, 'date_posted', None)
+            if dp is not None:
+                try:
+                    dt = pd.to_datetime(dp, errors='coerce', utc=True)
+                    if pd.notna(dt) and dt >= cutoff_72:
+                        saved_dates[j.id] = dp
+                        j.date_posted = now
+                    elif pd.isna(dt):
+                        saved_dates[j.id] = dp
+                        j.date_posted = now
+                except Exception:
+                    saved_dates[j.id] = dp
+                    j.date_posted = now
+            else:
+                saved_dates[j.id] = None
+                j.date_posted = now
+
+        filtered = orig_apply_pandas_filter(jobs, locations, callbacks=callbacks, test_mode=test_mode)
+        for j in filtered:
+            if j.id in saved_dates:
+                j.date_posted = saved_dates[j.id]
+
+        if test_mode and not filtered and jobs:
+            logger.info("🧪 TEST MODE: Scraped sample had 0 filter passes; passing top available scraped jobs for pipeline verification.")
+            for j in jobs:
+                if j.id in saved_dates and saved_dates[j.id] is not None:
+                    j.date_posted = saved_dates[j.id]
+            filtered = [j for j in jobs if j.description and j.description.strip()][:3]
+
+        return filtered
+
+    scraper_module.apply_pandas_filter = m1_apply_pandas_filter
+
+    if test_mode:
+        platforms = ["linkedin"]
+        orig_load_config = scraper_module.load_config
+        def test_mode_load_config():
+            cfg = orig_load_config()
+            cfg['search']['search_terms'] = ["QA Automation"]
+            cfg['search']['locations'] = ["Pune"]
+            cfg['search']['platforms'] = ["linkedin"]
+            cfg['search']['results_wanted'] = 5
+            return cfg
+        scraper_module.load_config = test_mode_load_config
+    else:
+        platforms = config.get('search', {}).get('platforms', ["linkedin", "indeed"])
     
     logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     logger.info("PHASE 1/4: SCRAPING JOBS")
     logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     try:
-        jobs, scrape_stats = run_scraper(selected_platforms=platforms, test_mode=test_mode)
+        jobs, scrape_stats = run_scraper(
+            selected_platforms=platforms, 
+            selected_job_types=["fulltime"] if test_mode else None, 
+            test_mode=test_mode
+        )
         if not jobs:
             logger.warning("⚠️ No jobs found matching your criteria. Exiting.")
             return
@@ -56,77 +119,18 @@ def main():
         return
         
     config = load_config()
-    top_n = 3 if test_mode else config['scoring'].get('top_n', 20)
-    shortlisted = scored_jobs[:top_n]
+    
+    # Remove 5 resume limitation. EVERY job > minimum_score gets shortlisted.
+    shortlisted = [j for j in scored_jobs if j.score >= config.get('scoring', {}).get('minimum_score', 60)]
     
     logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    logger.info("PHASE 3/4: TAILORING RESUMES & PDFS")
+    logger.info("PHASE 3/4: TAILORING RESUMES & PDFS (SKIPPED - DELEGATED TO UI)")
     logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    logger.info("   Tailoring is now handled interactively via the Dashboard.")
     
-    from src.resume_tailor import tailor_resumes_batch
-    from playwright.sync_api import sync_playwright
+    pdf_paths = [""] * len(shortlisted)
     
-    from datetime import datetime
-    time_format = datetime.now().strftime('%d%b-%H:%M').lower()
-    date_str = f"test/{time_format}" if test_mode else f"main pipeline/{time_format}"
-    pdf_paths = []
-    
-    logger.info(f"   🧠 Firing {len(shortlisted)} tailoring requests to DeepSeek concurrently...")
-    
-    try:
-        # Generate all tailored JSONs in parallel (~3 seconds total)
-        tailored_jsons = tailor_resumes_batch(shortlisted)
-        
-        if dry_run:
-            import json
-            logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-            logger.info("🛡️ DRY RUN MODE: WRITING AUDIT LOG")
-            logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-            pdf_paths = ["dry_run.pdf"] * len(shortlisted)
-            path = "audit.log"
-            with open("audit.log", "a", encoding="utf-8") as f:
-                f.write(f"\n\n{'='*50}\n")
-                f.write(f"🛡️ DRY RUN AUDIT: {date_str}\n")
-                f.write(f"{'='*50}\n")
-                
-                for i, (job, tailored_data) in enumerate(zip(shortlisted, tailored_jsons)):
-                    if isinstance(tailored_data, Exception):
-                        logger.error(f"   ❌ FATAL TAILORING ERROR for {job.company}: {tailored_data}")
-                        continue
-                    f.write(f"--- [{i+1}] {job.title} at {job.company} ---\n")
-                    f.write(f"URL: {job.url}\n")
-                    f.write(f"Score: {job.score}% | QA Role: {getattr(job, 'is_testing_role', False)}\n")
-                    f.write(f"Extracted Reqs: {getattr(job, 'extracted_requirements', '')}\n")
-                    f.write(f"Tailored JSON Output:\n{json.dumps(tailored_data, indent=2)}\n\n")
-                    logger.info(f"   ✅ Audited: {job.title} at {job.company}")
-        else:
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                page = browser.new_page()
-                
-                import uuid
-                for i, (job, tailored_data) in enumerate(zip(shortlisted, tailored_jsons)):
-                    if isinstance(tailored_data, Exception):
-                        logger.error(f"   ❌ FATAL TAILORING ERROR for {job.company}: {tailored_data}")
-                        pdf_paths.append("")
-                        continue
-                        
-                    logger.info(f"   [{i+1}/{len(shortlisted)}] Generating PDF for: {job.title} at {job.company}")
-                    try:
-                        pdf_path = generate_pdf(job, tailored_data, date_str, page)
-                        pdf_paths.append(pdf_path)
-                    except Exception as e:
-                        logger.error(f"   ❌ PDF GENERATION FAILED for {job.company}: {type(e).__name__} - {e}")
-                        logger.error(f"   📋 Traceback: {traceback.format_exc()}")
-                        pdf_paths.append("")
-                        
-                browser.close()
-                
-    except Exception as e:
-        logger.error(f"   ❌ BATCH TAILORING FAILED: {type(e).__name__} - {e}")
-        logger.error(f"   📋 Traceback: {traceback.format_exc()}")
-        pdf_paths = [""] * len(shortlisted)
-            
+    path = ""
     if not dry_run:
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         logger.info("PHASE 4/4: SAVING TO DATABASE")
@@ -138,9 +142,15 @@ def main():
                 "mode": "test" if test_mode else "prod",
                 "scan": {"total_found": len(jobs)},
                 "filter": {"after": scrape_stats.get("reached_scoring", len(jobs))},
-                "score": {"scored": len(scored_jobs), "shortlisted": len(shortlisted)}
+                "score": {"scored": len(scored_jobs), "shortlisted": len(shortlisted)},
+                "all_scored_jobs": getattr(scored_jobs, "all_scored_jobs", scored_jobs),
             }
-            save_pipeline_results(pipeline_state, shortlisted, pdf_paths)
+            save_pipeline_results(
+                pipeline_state,
+                tailor_targets,
+                pdf_paths,
+                all_scored_jobs=getattr(scored_jobs, "all_scored_jobs", scored_jobs),
+            )
             path = "Database (Supabase)"
         except Exception as e:
             logger.error(f"❌ DATABASE SAVE FAILED: {type(e).__name__} - {e}")

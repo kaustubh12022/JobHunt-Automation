@@ -5,7 +5,9 @@
 # --- AI Settings ---
 ai:
   provider: "deepseek"
-  model: "deepseek-v4-flash"              # Single model for both scoring & tailoring
+  scoring_model: "deepseek-chat"
+  tailoring_model: "deepseek-chat"
+  model: "deepseek-chat"
   api_key: ""
   temperature: 0.3
 
@@ -14,7 +16,6 @@ search:
   platforms:
     - "linkedin"
     - "indeed"
-    - "zip_recruiter"
   search_terms:
     # Simple, high-yield terms (Boolean AND/OR is unreliable in jobspy)
     - "Automation Tester"
@@ -29,7 +30,7 @@ search:
     - "Pune"
     - "Mumbai"
     - "Bangalore"
-  hours_old: 24                            # Strict: no jobs older than 24h (daily run)
+  hours_old: 72                            # Broadened from 24h to 72h for fresher coverage
   results_wanted: 20                      # Per-combination full page pull
   job_types:
     - "internship"
@@ -39,8 +40,22 @@ search:
 
 # --- Scoring Settings ---
 scoring:
-  minimum_score: 70
+  minimum_score: 60
   top_n: 30
+
+# --- Test Mode Settings ---
+test_mode:
+  enabled: false
+  search_terms:
+    - "QA Automation"
+  locations:
+    - "Pune"
+  platforms:
+    - "linkedin"
+  results_wanted: 5
+  skip_workday: true
+  score_top_n: 3
+  tailor_top_n: 1
 
 # --- Output Settings ---
 output:

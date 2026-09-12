@@ -17,12 +17,13 @@ The candidate is targeting these specific domains:
 - Be flexible and practical. We do NOT need a perfect 100% keyword match. If the core domain matches, assign a solid score (50+).
 - The candidate is a FRESHER. Do NOT heavily penalize them for lacking secondary/advanced tools (like AWS, Docker, Kubernetes, Kafka, CI/CD, JIRA). It is completely acceptable for an entry-level candidate to lack these.
 - If the JD asks for Automation Testing (Selenium/Postman/pytest) or Java Backend, score HIGH (70-90) as these are strong core matches.
-- If the JD asks for .NET/C#, score MODERATE (50-70).
+- If the JD asks for .NET/C#, score MODERATE (60-75) when matching OOP, SQL, and Azure fundamentals.
 - ONLY output match_score: 0 if the JD explicitly states 3+ years of mandatory experience, OR if the core language is a complete mismatch (e.g., purely C++ or Ruby).
 
-Return ONLY a raw JSON object with exactly five keys:
+Return ONLY a raw JSON object with exactly six keys:
 - "match_score": integer 0-100
 - "reason": a concise explanation in EXACTLY 10 to 12 words. Do not exceed 12 words under any circumstance.
+- "job_summary": a concise, single-sentence explanation of what the job is and what the role entails.
 - "missing_skills": array of top 5 skills the candidate genuinely LACKS. CRITICAL: Before listing any skill as missing, you MUST cross-check it against ALL sections of the Master Resume (skills, experience, projects, certifications). If the candidate has the skill listed ANYWHERE, do NOT report it as missing. Only report hard technical tools (e.g., "Kafka"), not soft skills.
 - "extracted_requirements": a concise comma-separated string of the core technical stack and domain requirements extracted from the JD.
 - "is_testing_role": boolean (true if the job is primarily a QA, Testing, SDET, or Automation role, false otherwise).

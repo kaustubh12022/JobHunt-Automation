@@ -25,7 +25,7 @@ from src.scorer import score_jobs
 from src.config_loader import load_config, get_human_date_str
 from src.db import save_pipeline_results, supabase
 from src.ai_engine import runtime_settings
-from datetime import datetime
+from datetime import datetime, timezone
 from flask_cors import CORS
 
 app = Flask(__name__, static_folder='frontend/dist')
@@ -40,7 +40,7 @@ def sync_state_to_supabase():
     while True:
         time.sleep(2)
         if not supabase: continue
-        current_state = json.dumps(pipeline_state)
+        current_state = json.dumps(pipeline_state, default=str)
         if current_state != last_synced_state:
             try:
                 supabase.table("live_pipeline").upsert({
@@ -52,7 +52,7 @@ def sync_state_to_supabase():
                     "scan_data": pipeline_state["scan"],
                     "score_data": pipeline_state["score"],
                     "tailor_data": pipeline_state["tailor"],
-                    "updated_at": datetime.utcnow().isoformat()
+                    "updated_at": datetime.now(timezone.utc).isoformat()
                 }).execute()
                 last_synced_state = current_state
             except Exception as e:
@@ -65,11 +65,14 @@ threading.Thread(target=sync_state_to_supabase, daemon=True).start()
 # PIPELINE STATE MACHINES
 # ══════════════════════════════════════════════
 stop_event = threading.Event()
+resume_generation_event = threading.Event()
+pipeline_lock = threading.Lock()
+pending_pipeline_data = {}
 
 pipeline_state = {
     "running": False,
     "mode": "idle",           # idle | prod | test
-    "phase": "idle",          # idle | scanning | filtering | scoring | tailoring | saving | done | error
+    "phase": "idle",          # idle | scanning | filtering | scoring | review | tailoring | saving | done | error
     "status_text": "",
     "scan": {
         "total_found": 0,
@@ -94,6 +97,7 @@ pipeline_state = {
         "shortlisted": 0,
         "live_scores": []
     },
+    "shortlisted_jobs": [],
     "tailor": {
         "total": 0,
         "completed": 0,
@@ -111,6 +115,44 @@ pipeline_state = {
 test_state = pipeline_state.copy()
 
 import re
+
+def get_single_sentence_summary(job):
+    """Derives a concise single-sentence summary explaining what the job is."""
+    # 1. Direct explicit job_summary if present
+    job_summary = getattr(job, 'job_summary', None)
+    if job_summary and isinstance(job_summary, str) and job_summary.strip():
+        s = job_summary.strip()
+        return s if s.endswith(('.', '!', '?')) else s + '.'
+
+    title = getattr(job, 'title', 'Role') or 'Role'
+    company = getattr(job, 'company', 'Company') or 'Company'
+    reqs = getattr(job, 'extracted_requirements', '') or ''
+    if '|||REASON|||' in reqs:
+        reqs = reqs.split('|||REASON|||')[0].strip()
+
+    # 2. Check if description has an introductory role sentence
+    desc = getattr(job, 'description', '') or ''
+    if desc:
+        sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', desc) if s.strip()]
+        for sent in sentences:
+            sent_clean = ' '.join(sent.split())
+            if 20 <= len(sent_clean) <= 180:
+                sent_lower = sent_clean.lower()
+                if any(kw in sent_lower for kw in ['looking for', 'seeking', 'responsible for', 'role is', 'position is', 'you will', 'engineer to', 'developer to', 'team is looking', 'join our']):
+                    return sent_clean if sent_clean.endswith(('.', '!', '?')) else sent_clean + '.'
+
+    # 3. If extracted requirements exist, synthesize role explanation
+    if reqs:
+        return f"{title} role at {company} requiring {reqs}."
+
+    # 4. If reasons is present and not merely score evaluation, use it if needed
+    reasons = getattr(job, 'reasons', None)
+    if reasons:
+        r_str = str(reasons[0]).strip() if isinstance(reasons, list) and reasons else str(reasons).strip()
+        if r_str and len(r_str) > 10 and not any(neg in r_str.lower() for neg in ['lacks', 'score', 'missing', 'penalty', 'threshold']):
+            return r_str if r_str.endswith(('.', '!', '?')) else r_str + '.'
+
+    return f"{title} position at {company}."
 
 def extract_number(text):
     match = re.search(r'\d+', text)
@@ -144,6 +186,8 @@ logger.add(pipeline_log_interceptor, format="{message}")
 # EVENT CALLBACKS
 # ══════════════════════════════════════════════
 def on_cycle_start(cycle_data):
+    if stop_event.is_set():
+        return
     if isinstance(cycle_data, dict):
         if "wait_time" in cycle_data:
             pipeline_state["status_text"] = cycle_data["message"]
@@ -160,19 +204,27 @@ def on_cycle_start(cycle_data):
         pipeline_state["scan"]["is_waiting"] = False
 
 def on_job_scraped(job_dict):
+    if stop_event.is_set():
+        return
     pipeline_state["scan"]["total_found"] += 1
     pipeline_state["scan"]["live_jobs"].insert(0, job_dict)
     if len(pipeline_state["scan"]["live_jobs"]) > 100:
         pipeline_state["scan"]["live_jobs"].pop()
 
 def on_job_dropped(title, company, reason):
+    if stop_event.is_set():
+        return
     if len(pipeline_state["filter"]["dropped_jobs"]) < 100:
         pipeline_state["filter"]["dropped_jobs"].insert(0, {"title": str(title), "company": str(company), "reason": str(reason)})
 
 def on_score_start(job_id, title, company):
+    if stop_event.is_set():
+        return
     pipeline_state["score"]["live_scores"].insert(0, {"id": job_id, "title": str(title), "company": str(company), "status": "scoring", "score": None})
 
 def on_score_complete(job_id, score, reason=""):
+    if stop_event.is_set():
+        return
     for item in pipeline_state["score"]["live_scores"]:
         if item["id"] == job_id:
             item["score"] = score
@@ -211,17 +263,22 @@ def run_pipeline(platforms, job_types=None, dry_run=False, test_mode=False):
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         logger.info("PHASE 1/4: SCRAPING JOBS")
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        jobs, scrape_stats = run_scraper(selected_platforms=platforms, selected_job_types=job_types, test_mode=test_mode, callbacks=callbacks)
+        jobs, scrape_stats = run_scraper(selected_platforms=platforms, selected_job_types=job_types, test_mode=test_mode, callbacks=callbacks, stop_event=stop_event)
         # NOTE: Do NOT overwrite total_found here — the on_job_scraped callback
         # is the single source of truth and has been incrementing it live.
         # Overwriting caused the UI counter to jump erratically.
         pipeline_state["filter"]["after"] = scrape_stats.get("reached_scoring", len(jobs))
 
-        if not jobs:
-            logger.warning("⚠️ No jobs found matching your criteria.")
+        if stop_event.is_set():
+            logger.info("🛑 Pipeline aborted during scraping phase.")
             return
 
-        if stop_event.is_set(): return
+        if not jobs:
+            logger.warning("⚠️ No jobs found matching your criteria.")
+            with pipeline_lock:
+                pipeline_state["running"] = False
+                pipeline_state["phase"] = "done"
+            return
 
         pipeline_state["phase"] = "scoring"
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -231,35 +288,121 @@ def run_pipeline(platforms, job_types=None, dry_run=False, test_mode=False):
         if test_mode:
             logger.info("🧪 TEST MODE: Scoring all jobs, but limiting resumes to 3.")
             
-        scored_jobs = score_jobs(jobs, test_mode=test_mode, callbacks=callbacks)
+        scored_jobs = score_jobs(jobs, test_mode=test_mode, callbacks=callbacks, stop_event=stop_event)
+
+        if stop_event.is_set():
+            logger.info("🛑 Pipeline aborted during scoring phase.")
+            return
+
         pipeline_state["score"]["scored"] = len(scored_jobs)
+        raw_scored = getattr(scored_jobs, "all_scored_jobs", scored_jobs) or []
+        pipeline_state["all_scored_jobs"] = [
+            {
+                "id": getattr(j, "id", ""),
+                "title": getattr(j, "title", ""),
+                "company": getattr(j, "company", ""),
+                "location": getattr(j, "location", ""),
+                "score": getattr(j, "score", 0),
+                "reasons": getattr(j, "reasons", []),
+                "summary": get_single_sentence_summary(j),
+                "missing_skills": getattr(j, "missing_skills", []),
+                "extracted_requirements": getattr(j, "extracted_requirements", ""),
+                "is_testing_role": getattr(j, "is_testing_role", False),
+                "tokens_used": getattr(j, "tokens_used", 0),
+                "cost_usd": getattr(j, "cost_usd", 0.0),
+                "token_usage": getattr(j, "token_usage", {}) or {},
+            }
+            if not isinstance(j, dict) else j
+            for j in raw_scored
+        ]
 
         if not scored_jobs:
             logger.warning("⚠️ No jobs met the minimum score threshold.")
+            with pipeline_lock:
+                pipeline_state["running"] = False
+                pipeline_state["phase"] = "done"
             return
 
-        if stop_event.is_set(): return
+        time_format = datetime.now().strftime('%d%b-%H-%M').lower()
+        date_str = f"test/{time_format}" if test_mode else f"main pipeline/{time_format}"
 
         if test_mode:
             shortlisted = scored_jobs[:3]
-            logger.info("🧪 TEST MODE: Generating resumes for top 3 jobs.")
+            logger.info("🧪 TEST MODE: Shortlisted top 3 jobs for review.")
         else:
             shortlisted = scored_jobs
-            logger.info(f"Generating resumes for all {len(shortlisted)} jobs that passed the threshold.")
+            logger.info(f"Shortlisted all {len(shortlisted)} jobs that passed the threshold for review.")
             
         pipeline_state["score"]["shortlisted"] = len(shortlisted)
 
+        # ── INTERACTIVE REVIEW PHASE ──
+        # Pause execution so user can review shortlisted jobs & select missing skills to embed
+        resume_generation_event.clear()
+        with pipeline_lock:
+            pending_pipeline_data.clear()
+            pending_pipeline_data["shortlisted"] = shortlisted
+            pending_pipeline_data["date_str"] = date_str
+            pending_pipeline_data["dry_run"] = dry_run
+            pending_pipeline_data["test_mode"] = test_mode
+            pending_pipeline_data["scored_jobs"] = scored_jobs
+            pending_pipeline_data["user_selections"] = None
+
+            pipeline_state["shortlisted_jobs"] = [
+                {
+                    "id": getattr(j, "id", ""),
+                    "title": getattr(j, "title", ""),
+                    "company": getattr(j, "company", ""),
+                    "location": getattr(j, "location", ""),
+                    "score": getattr(j, "score", 0),
+                    "reasons": getattr(j, "reasons", []),
+                    "summary": get_single_sentence_summary(j),
+                    "missing_skills": list(getattr(j, "missing_skills", []) or []),
+                    "extracted_requirements": getattr(j, "extracted_requirements", "") or "",
+                    "is_testing_role": getattr(j, "is_testing_role", False),
+                    "url": getattr(j, "url", "") or "",
+                }
+                for j in shortlisted
+            ]
+            pipeline_state["phase"] = "review"
+            pipeline_state["status_text"] = f"Scoring complete. {len(shortlisted)} jobs shortlisted for review."
+
+        logger.info(f"⏸️ Pipeline paused: Waiting for user to review {len(shortlisted)} shortlisted jobs...")
+        resume_generation_event.wait()
+
+        if stop_event.is_set():
+            logger.info("🛑 Pipeline aborted during review phase.")
+            return
+
+        # Apply user selections
+        user_selections = pending_pipeline_data.get("user_selections")
+        if user_selections is not None:
+            selected_map = {
+                str(item["id"]).strip(): [str(s).strip() for s in item.get("selected_skills", []) if str(s).strip()]
+                for item in user_selections if isinstance(item, dict) and "id" in item
+            }
+            shortlisted = [j for j in shortlisted if str(getattr(j, "id", "")).strip() in selected_map]
+            for j in shortlisted:
+                j.user_selected_skills = selected_map.get(str(getattr(j, "id", "")).strip(), [])
+
+        if not shortlisted:
+            logger.warning("⚠️ No jobs selected for resume generation.")
+            with pipeline_lock:
+                pipeline_state["running"] = False
+                pipeline_state["phase"] = "done"
+                pipeline_state["status_text"] = "No jobs selected for resume generation."
+                pipeline_state["shortlisted_jobs"] = []
+            return
+
+        pipeline_state["score"]["shortlisted"] = len(shortlisted)
         pipeline_state["phase"] = "tailoring"
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        logger.info("PHASE 3/4: TAILORING RESUMES & PDFS")
+        logger.info(f"PHASE 3/4: TAILORING RESUMES & PDFS ({len(shortlisted)} jobs selected)")
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
         from src.resume_tailor import tailor_resume
         from src.pdf_generator import generate_pdf
         from playwright.sync_api import sync_playwright
 
-        time_format = datetime.now().strftime('%d%b-%H-%M').lower()
-        date_str = f"test/{time_format}" if test_mode else f"main pipeline/{time_format}"
         pdf_paths = []
         
         if dry_run:
@@ -272,7 +415,7 @@ def run_pipeline(platforms, job_types=None, dry_run=False, test_mode=False):
             
             from src.resume_tailor import tailor_resumes_batch
             logger.info("   [Batch] Starting concurrent AI tailoring for dry run...")
-            tailored_jsons = tailor_resumes_batch(shortlisted)
+            tailored_jsons = tailor_resumes_batch(shortlisted, stop_event=stop_event)
             
             with open("audit.log", "a", encoding="utf-8") as f:
                 f.write(f"\n\n{'='*50}\n")
@@ -300,12 +443,15 @@ def run_pipeline(platforms, job_types=None, dry_run=False, test_mode=False):
                 from src.resume_tailor import tailor_resumes_batch
                 
                 logger.info(f"   [Batch] Requesting {len(shortlisted)} resumes from DeepSeek concurrently...")
-                tailored_jsons = tailor_resumes_batch(shortlisted)
+                tailored_jsons = tailor_resumes_batch(shortlisted, stop_event=stop_event)
                 
                 with sync_playwright() as p:
                     browser = p.chromium.launch(headless=True)
                     page = browser.new_page()
                     for i, (job, tailored_data) in enumerate(zip(shortlisted, tailored_jsons)):
+                        if stop_event.is_set():
+                            logger.info("🛑 PDF generation aborted.")
+                            break
                         if isinstance(tailored_data, Exception) or not tailored_data:
                             logger.error(f"   ❌ RESUME TAILORING FAILED for {job.company}: {tailored_data}")
                             pdf_paths.append("")
@@ -339,7 +485,12 @@ def run_pipeline(platforms, job_types=None, dry_run=False, test_mode=False):
             logger.info("PHASE 4/4: SAVE TO DATABASE")
             logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
-            save_pipeline_results(pipeline_state, shortlisted, pdf_paths)
+            save_pipeline_results(
+                pipeline_state,
+                shortlisted,
+                pdf_paths,
+                all_scored_jobs=getattr(scored_jobs, "all_scored_jobs", scored_jobs),
+            )
             path = "Database (Supabase)"
 
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -358,8 +509,15 @@ def run_pipeline(platforms, job_types=None, dry_run=False, test_mode=False):
         logger.error(f"❌ Pipeline error: {e}")
         logger.error(f"📋 Full traceback: {traceback.format_exc()}")
     finally:
-        pipeline_state["phase"] = "done"
-        pipeline_state["running"] = False
+        with pipeline_lock:
+            if stop_event.is_set():
+                pipeline_state["phase"] = "idle"
+                pipeline_state["running"] = False
+                pipeline_state["status_text"] = "Aborted by user."
+                pipeline_state["shortlisted_jobs"] = []
+            else:
+                pipeline_state["phase"] = "done"
+                pipeline_state["running"] = False
 
 
 # ══════════════════════════════════════════════
@@ -368,61 +526,127 @@ def run_pipeline(platforms, job_types=None, dry_run=False, test_mode=False):
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_react(path):
-    print(f"DEBUG: serve_react called with path: {path}")
-    if path != "" and os.path.exists(app.static_folder + '/' + path):
+    target_path = os.path.join(app.static_folder, path) if path else os.path.join(app.static_folder, 'index.html')
+    if path != "" and os.path.exists(target_path):
         return send_from_directory(app.static_folder, path)
     else:
-        return send_from_directory(app.static_folder, 'index.html')
+        index_file = os.path.join(app.static_folder, 'index.html')
+        if os.path.exists(index_file):
+            return send_from_directory(app.static_folder, 'index.html')
+        return "Frontend dist not built. Please run npm run build in frontend/", 404
 
 
 @app.route('/api/start', methods=['POST'])
 def start_pipeline():
-    if pipeline_state["running"]:
-        return jsonify({"error": "A pipeline is already running"}), 400
-    
-    # Read platform selections from frontend toggles
-    data = request.get_json(silent=True) or {}
+    raw_data = request.get_json(silent=True)
+    if raw_data is not None and not isinstance(raw_data, dict):
+        return jsonify({"error": "Invalid JSON payload, expected an object"}), 400
+    data = raw_data or {}
+
+    with pipeline_lock:
+        if pipeline_state["running"]:
+            return jsonify({"error": "A pipeline is already running"}), 400
+        pipeline_state["running"] = True
+        pipeline_state["mode"] = "prod"
+
     platforms = data.get('platforms', ["linkedin", "indeed"])
     job_types = data.get('job_types', ["fulltime", "internship"])
     dry_run = data.get('dry_run', False)
-    
-    # Apply AI model settings from frontend
-    _apply_ai_settings(data)
-    
-    stop_event.clear()
-    thread = threading.Thread(target=run_pipeline, args=(platforms, job_types, dry_run, False))
-    thread.daemon = True
-    thread.start()
+
+    try:
+        # Apply AI model settings from frontend
+        _apply_ai_settings(data)
+        stop_event.clear()
+        resume_generation_event.clear()
+        pending_pipeline_data.clear()
+        pipeline_state["shortlisted_jobs"] = []
+        thread = threading.Thread(target=run_pipeline, args=(platforms, job_types, dry_run, False))
+        thread.daemon = True
+        thread.start()
+    except Exception as e:
+        with pipeline_lock:
+            pipeline_state["running"] = False
+            pipeline_state["mode"] = "idle"
+        logger.error(f"Failed to start pipeline: {e}")
+        return jsonify({"error": f"Failed to start pipeline: {e}"}), 500
+
     return jsonify({"message": "Started successfully"})
 
 
 @app.route('/api/test-start', methods=['POST'])
 def start_test_pipeline():
-    if pipeline_state["running"]:
-        return jsonify({"error": "A pipeline is already running"}), 400
-    
-    # Read platform selections from frontend toggles
-    data = request.get_json(silent=True) or {}
+    raw_data = request.get_json(silent=True)
+    if raw_data is not None and not isinstance(raw_data, dict):
+        return jsonify({"error": "Invalid JSON payload, expected an object"}), 400
+    data = raw_data or {}
+
+    with pipeline_lock:
+        if pipeline_state["running"]:
+            return jsonify({"error": "A pipeline is already running"}), 400
+        pipeline_state["running"] = True
+        pipeline_state["mode"] = "test"
+
     platforms = data.get('platforms', ["linkedin", "indeed"])
     job_types = data.get('job_types', ["fulltime", "internship"])
-    
-    # Apply AI model settings from frontend
-    _apply_ai_settings(data)
-    
-    stop_event.clear()
-    thread = threading.Thread(target=run_pipeline, args=(platforms, job_types, False, True))
-    thread.daemon = True
-    thread.start()
+
+    try:
+        # Apply AI model settings from frontend
+        _apply_ai_settings(data)
+        stop_event.clear()
+        resume_generation_event.clear()
+        pending_pipeline_data.clear()
+        pipeline_state["shortlisted_jobs"] = []
+        thread = threading.Thread(target=run_pipeline, args=(platforms, job_types, False, True))
+        thread.daemon = True
+        thread.start()
+    except Exception as e:
+        with pipeline_lock:
+            pipeline_state["running"] = False
+            pipeline_state["mode"] = "idle"
+        logger.error(f"Failed to start test pipeline: {e}")
+        return jsonify({"error": f"Failed to start test pipeline: {e}"}), 500
+
     return jsonify({"message": "Test pipeline started"})
 
 
 @app.route('/api/stop', methods=['POST'])
 def stop_pipeline():
-    stop_event.set()
-    pipeline_state["running"] = False
-    pipeline_state["phase"] = "idle"
-    pipeline_state["status_text"] = "Aborted by user."
+    with pipeline_lock:
+        stop_event.set()
+        resume_generation_event.set()
+        pipeline_state["running"] = False
+        pipeline_state["phase"] = "idle"
+        pipeline_state["status_text"] = "Aborted by user."
+        pipeline_state["shortlisted_jobs"] = []
+        pending_pipeline_data.clear()
     return jsonify({"message": "Pipeline aborted."})
+
+
+@app.route('/api/generate-resumes', methods=['POST'])
+def api_generate_resumes():
+    if request.is_json and request.data.strip():
+        raw_data = request.get_json(silent=True)
+        if raw_data is None:
+            return jsonify({"error": "Invalid JSON payload"}), 400
+    else:
+        raw_data = request.get_json(silent=True)
+
+    if raw_data is not None and not isinstance(raw_data, dict):
+        return jsonify({"error": "Invalid JSON payload, expected an object"}), 400
+    data = raw_data or {}
+    if "selected_jobs" in data and not isinstance(data["selected_jobs"], list):
+        return jsonify({"error": "selected_jobs must be a list"}), 400
+    selected_jobs = data.get("selected_jobs", [])
+
+    with pipeline_lock:
+        if pipeline_state.get("phase") != "review":
+            return jsonify({"error": "Pipeline is not in review phase"}), 400
+        pending_pipeline_data["user_selections"] = selected_jobs
+        pipeline_state["phase"] = "tailoring"
+        pipeline_state["status_text"] = "Tailoring resumes with your selected skills..."
+        resume_generation_event.set()
+
+    return jsonify({"message": "Resume generation started", "count": len(selected_jobs)})
 
 @app.route('/api/status', methods=['GET'])
 def get_status():
@@ -434,7 +658,7 @@ def stream_status():
     def event_stream():
         last_state = None
         while True:
-            current_state = json.dumps(pipeline_state)
+            current_state = json.dumps(pipeline_state, default=str)
             if current_state != last_state:
                 yield f"data: {current_state}\n\n"
                 last_state = current_state
@@ -534,7 +758,10 @@ def api_get_resume(job_id):
 def get_logs():
     logs = []
     while not log_queue.empty():
-        logs.append(log_queue.get())
+        try:
+            logs.append(log_queue.get_nowait())
+        except Exception:
+            break
     return jsonify(logs)
 
 
@@ -546,6 +773,8 @@ def get_config_api():
 
 def _apply_ai_settings(data: dict):
     """Apply AI model/thinking settings from frontend request to runtime_settings."""
+    if not isinstance(data, dict):
+        return
     if 'scoring_model' in data:
         runtime_settings['scoring_model'] = data['scoring_model']
     if 'scoring_thinking' in data:
@@ -595,9 +824,22 @@ def edit_profile():
 from src.models import Job
 from uuid import uuid4
 
+@app.route('/api/pending-tailors', methods=['GET'])
+def get_pending_tailors():
+    if not supabase: return jsonify([])
+    try:
+        # Get tracked jobs with empty or null pdf_filename
+        res = supabase.table('tracked_jobs').select('*').or_('pdf_filename.eq."",pdf_filename.is.null').order('score', desc=True).execute()
+        return jsonify(res.data)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/manual-tailor/score', methods=['POST'])
 def manual_tailor_score():
-    data = request.get_json()
+    raw_data = request.get_json(silent=True)
+    if raw_data is not None and not isinstance(raw_data, dict):
+        return jsonify({"error": "Invalid JSON payload, expected an object"}), 400
+    data = raw_data or {}
     job_description = data.get('job_description', '')
     job_title = data.get('job_title', 'Unknown Role')
     company = data.get('company', 'Unknown Company')
@@ -621,20 +863,24 @@ def manual_tailor_score():
 
 @app.route('/api/manual-tailor/generate', methods=['POST'])
 def manual_tailor_generate():
-    data = request.get_json()
+    raw_data = request.get_json(silent=True)
+    if raw_data is not None and not isinstance(raw_data, dict):
+        return jsonify({"error": "Invalid JSON payload, expected an object"}), 400
+    data = raw_data or {}
     
     job = Job(
         title=data.get('job_title', 'Unknown Role'),
         company=data.get('company', 'Unknown Company'),
         location='Remote',
         description=data.get('job_description', ''),
-        url='',
-        id=str(uuid4()),
+        url=data.get('url', ''),
+        id=data.get('id') or str(uuid4()),
         score=data.get('score', 0),
         missing_skills=data.get('missing_skills', []),
         extracted_requirements=data.get('extracted_requirements', ''),
         is_testing_role=data.get('is_testing_role', False)
     )
+    job.run_id = data.get('run_id')
     
     selected_skills = data.get('selected_skills', [])
     
