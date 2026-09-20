@@ -73,6 +73,11 @@ skills:
   - "CSS"
 
   # --- Frameworks & Libraries ---
+  - "React"
+  - "Next.js"
+  - "Node.js"
+  - "Vite"
+  - "Mongoose"
   - "Spring Core (Basics)"
   - "JDBC"
   - "REST APIs"
@@ -99,6 +104,9 @@ skills:
   - "Problem-Solving"
 
   # --- Tools & Platforms ---
+  - "Docker"
+  - "Kubernetes"
+  - "MongoDB"
   - "Git"
   - "GitHub"
   - "VS Code"
