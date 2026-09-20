@@ -828,7 +828,7 @@ def tailor_resume_with_skills(job: Job, selected_skills: list[str]) -> str:
             config = load_config()
             # fallback to standard Windows desktop path if config is missing
             desktop_base = config.get("output", {}).get("desktop_path", os.path.join(os.path.expanduser("~"), "Desktop"))
-            desktop_resumes_dir = os.path.join(desktop_base, "resumes", date_str)
+            desktop_resumes_dir = os.path.join(desktop_base, f"{date_str}_Manual_Tailor")
             os.makedirs(desktop_resumes_dir, exist_ok=True)
             shutil.copy2(pdf_path, os.path.join(desktop_resumes_dir, filename))
         except Exception as e:
