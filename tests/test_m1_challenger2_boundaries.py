@@ -33,7 +33,7 @@ def test_config_yaml_has_no_deprecated_models():
 
     cfg = load_config()
     assert cfg["ai"]["scoring_model"] == "deepseek-chat"
-    assert cfg["ai"]["tailoring_model"] == "deepseek-reasoner"
+    assert cfg["ai"]["tailoring_model"] == "deepseek-chat"
     assert cfg["ai"]["model"] == "deepseek-chat"
 
 
@@ -45,7 +45,7 @@ def test_ai_engine_has_no_deprecated_models():
     assert "deepseek-v4-pro" not in content.lower(), "Found deprecated deepseek-v4-pro in ai_engine.py"
 
     assert ai_engine.runtime_settings["scoring_model"] == "deepseek-chat"
-    assert ai_engine.runtime_settings["tailoring_model"] == "deepseek-reasoner"
+    assert ai_engine.runtime_settings["tailoring_model"] == "deepseek-chat"
 
 
 def test_dashboard_has_no_deprecated_models():
