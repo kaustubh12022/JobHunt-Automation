@@ -46,7 +46,7 @@ def test_m3_scoring_model_runtime_defaults():
     """Verify runtime settings default to deepseek-chat for scoring with thinking disabled."""
     assert runtime_settings.get("scoring_model") == "deepseek-chat"
     assert runtime_settings.get("scoring_thinking") is False
-    assert runtime_settings.get("tailoring_model") == "deepseek-reasoner"
+    assert runtime_settings.get("tailoring_model") == "deepseek-chat"
     assert runtime_settings.get("tailoring_thinking") is True
 
 

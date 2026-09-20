@@ -74,7 +74,7 @@ function IdleView({ onStart }) {
   // AI Model Settings
   const [scoringModel, setScoringModel] = useState('deepseek-chat');
   const [scoringThinking, setScoringThinking] = useState(false);
-  const [tailoringModel, setTailoringModel] = useState('deepseek-reasoner');
+  const [tailoringModel, setTailoringModel] = useState('deepseek-chat');
   const [tailoringThinking, setTailoringThinking] = useState(true);
 
   const togglePlatform = (p) => {
@@ -174,8 +174,8 @@ function IdleView({ onStart }) {
               value={tailoringModel}
               onChange={setTailoringModel}
               options={[
+                { value: 'deepseek-chat', label: 'DeepSeek Chat (V3 - Fast Tailoring)' },
                 { value: 'deepseek-reasoner', label: 'DeepSeek Reasoner (R1 - Deep Tailoring)' },
-                { value: 'deepseek-chat', label: 'DeepSeek Chat (V3)' },
               ]}
             />
             <div style={{ flex: '0 0 140px' }}>
