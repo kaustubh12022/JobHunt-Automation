@@ -12,10 +12,10 @@ export default function ManualTailor() {
   const [jobDescription, setJobDescription] = useState('');
   const [formError, setFormError] = useState(null);
 
-  // Active job for review
   const [activeJobId, setActiveJobId] = useState(null);
   
   const [isScoringAll, setIsScoringAll] = useState(false);
+  const [isGeneratingAll, setIsGeneratingAll] = useState(false);
 
   const handleAddJob = () => {
     if (!jobDescription.trim()) {
@@ -88,6 +88,60 @@ export default function ManualTailor() {
     }));
     
     setIsScoringAll(false);
+  };
+
+  const handleGenerateAll = async () => {
+    setIsGeneratingAll(true);
+    
+    const jobsToGenerate = jobs.filter(j => j.status === 'scored');
+    
+    setJobs(prev => prev.map(j => 
+      j.status === 'scored' ? { ...j, status: 'generating', error: null } : j
+    ));
+
+    try {
+      const payload = {
+        jobs: jobsToGenerate.map(job => ({
+          id: job.id,
+          job_title: job.jobTitle,
+          company: job.company,
+          url: job.jobLink,
+          job_description: job.jobDescription,
+          score: job.scoreData.score,
+          missing_skills: job.scoreData.missing_skills,
+          extracted_requirements: job.scoreData.extracted_requirements,
+          is_testing_role: job.scoreData.is_testing_role,
+          selected_skills: job.selectedSkills
+        }))
+      };
+
+      const res = await fetch('/api/manual-tailor/generate-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to generate resumes in batch");
+      
+      data.results.forEach(result => {
+        setJobs(prev => prev.map(j => {
+          if (j.id === result.id) {
+            if (result.error) {
+              return { ...j, status: 'scored', error: result.error };
+            }
+            return { ...j, status: 'result', pdfUrl: result.pdf_url };
+          }
+          return j;
+        }));
+      });
+    } catch (err) {
+      setJobs(prev => prev.map(j => 
+        jobsToGenerate.find(g => g.id === j.id) ? { ...j, status: 'scored', error: err.message } : j
+      ));
+    }
+    
+    setIsGeneratingAll(false);
   };
 
   const handleSkillToggle = (jobId, skill) => {
@@ -271,13 +325,22 @@ export default function ManualTailor() {
             <h2 style={{ fontSize: '20px', margin: 0, color: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <ListChecks size={22} className="text-cyan" /> Job Queue ({jobs.length})
             </h2>
-            <button 
-              onClick={handleScoreAll} 
-              disabled={isScoringAll || jobs.filter(j => j.status === 'pending' || j.status === 'error').length === 0}
-              style={{ background: 'var(--cyan)', color: '#000', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', border: 'none', cursor: 'pointer', opacity: (isScoringAll || jobs.filter(j => j.status === 'pending' || j.status === 'error').length === 0) ? 0.5 : 1 }}
-            >
-              {isScoringAll ? 'Scoring...' : 'Score All Pending'}
-            </button>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                onClick={handleScoreAll} 
+                disabled={isScoringAll || jobs.filter(j => j.status === 'pending' || j.status === 'error').length === 0}
+                style={{ background: 'var(--cyan)', color: '#000', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', border: 'none', cursor: 'pointer', opacity: (isScoringAll || jobs.filter(j => j.status === 'pending' || j.status === 'error').length === 0) ? 0.5 : 1 }}
+              >
+                {isScoringAll ? 'Scoring...' : 'Score All Pending'}
+              </button>
+              <button 
+                onClick={handleGenerateAll} 
+                disabled={isGeneratingAll || jobs.filter(j => j.status === 'scored').length === 0}
+                style={{ background: 'linear-gradient(135deg, var(--cyan), #3b82f6)', color: '#000', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', border: 'none', cursor: 'pointer', opacity: (isGeneratingAll || jobs.filter(j => j.status === 'scored').length === 0) ? 0.5 : 1 }}
+              >
+                {isGeneratingAll ? 'Generating...' : 'Generate All Scored'}
+              </button>
+            </div>
           </div>
 
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }}>

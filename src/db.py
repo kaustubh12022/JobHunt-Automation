@@ -275,8 +275,71 @@ def save_manual_job(job: Job, pdf_path: str):
             "job_id": job_db_id,
             "status": "generated",
         }).execute()
+        return run_id
     except Exception as e:
         logger.error(f"Failed to save manual job to Supabase: {e}")
+        return None
+
+def save_manual_jobs_batch(jobs: list[Job], pdf_paths: list[str]):
+    """Saves a batch of manually tailored jobs to the tracker database under a single pipeline run."""
+    if not supabase or not jobs: return None
+    
+    try:
+        # 1. Create a single "manual" pipeline run to group these
+        run = supabase.table("pipeline_runs").insert({
+            "mode": "manual",
+            "jobs_scraped": 0,
+            "jobs_filtered": 0,
+            "jobs_scored": len(jobs),
+            "jobs_shortlisted": len(jobs),
+            "resumes_generated": sum(1 for p in pdf_paths if p),
+            "completed_at": datetime.now(timezone.utc).isoformat()
+        }).execute()
+        
+        run_id = run.data[0]["id"] if (run and getattr(run, "data", None)) else None
+        
+        for job, pdf_path in zip(jobs, pdf_paths):
+            stored_pdf_url = pdf_path
+            
+            if pdf_path and os.path.exists(pdf_path):
+                filename = Path(pdf_path).name
+                try:
+                    with open(pdf_path, 'rb') as f:
+                        supabase.storage.from_("resumes").upload(filename, f.read())
+                    public_url = supabase.storage.from_("resumes").get_public_url(filename)
+                except Exception as e:
+                    logger.error(f"Failed to upload {filename} to Supabase: {e}")
+                    
+            # 2. Upsert the tracked job
+            job_record = supabase.table("tracked_jobs").upsert({
+                "id": job.id,
+                "run_id": run_id,
+                "title": job.title,
+                "company": job.company,
+                "location": job.location,
+                "url": getattr(job, 'url', ''),
+                "description": getattr(job, 'description', ''),
+                "source": "manual",
+                "job_type": getattr(job, 'job_type', 'fulltime'),
+                "score": getattr(job, 'score', 0),
+                "missing_skills": getattr(job, 'missing_skills', []),
+                "extracted_requirements": getattr(job, 'extracted_requirements', None),
+                "is_testing_role": getattr(job, 'is_testing_role', None),
+                "tailored_resume": getattr(job, 'tailored_resume', None),
+                "pdf_filename": stored_pdf_url,
+            }).execute()
+            
+            # 3. Create application entry
+            job_db_id = job_record.data[0]["id"] if (job_record and getattr(job_record, "data", None)) else job.id
+            supabase.table("applications").insert({
+                "job_id": job_db_id,
+                "status": "generated",
+            }).execute()
+            
+        return run_id
+    except Exception as e:
+        logger.error(f"Failed to save manual jobs batch to Supabase: {e}")
+        return None
 
 def delete_pipeline_run(run_id: str):
     """Manually cascade delete a pipeline run and return the PDF paths that need local deletion."""
