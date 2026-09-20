@@ -896,6 +896,67 @@ def manual_tailor_generate():
     filename = os.path.basename(pdf_path)
     return jsonify({"pdf_url": f"/api/resume/manual/{filename}"})
 
+@app.route('/api/manual-tailor/generate-batch', methods=['POST'])
+def manual_tailor_generate_batch():
+    raw_data = request.get_json(silent=True)
+    if raw_data is not None and not isinstance(raw_data, dict):
+        return jsonify({"error": "Invalid JSON payload, expected an object"}), 400
+    data = raw_data or {}
+    
+    jobs_data = data.get('jobs', [])
+    if not jobs_data:
+        return jsonify({"error": "No jobs provided for batch generation"}), 400
+        
+    jobs_to_process = []
+    selected_skills_list = []
+    
+    for j_data in jobs_data:
+        job = Job(
+            title=j_data.get('job_title', 'Unknown Role'),
+            company=j_data.get('company', 'Unknown Company'),
+            location='Remote',
+            description=j_data.get('job_description', ''),
+            url=j_data.get('url', ''),
+            id=j_data.get('id') or str(uuid4()),
+            score=j_data.get('score', 0),
+            missing_skills=j_data.get('missing_skills', []),
+            extracted_requirements=j_data.get('extracted_requirements', ''),
+            is_testing_role=j_data.get('is_testing_role', False)
+        )
+        jobs_to_process.append(job)
+        selected_skills_list.append(j_data.get('selected_skills', []))
+        
+    from src.resume_tailor import tailor_resume_with_skills
+    pdf_paths = []
+    generated_results = []
+    
+    for job, skills in zip(jobs_to_process, selected_skills_list):
+        try:
+            pdf_path = tailor_resume_with_skills(job, skills)
+            pdf_paths.append(pdf_path)
+            
+            if pdf_path:
+                filename = os.path.basename(pdf_path)
+                generated_results.append({
+                    "id": job.id,
+                    "pdf_url": f"/api/resume/manual/{filename}"
+                })
+            else:
+                generated_results.append({
+                    "id": job.id,
+                    "error": "Failed to generate resume"
+                })
+        except Exception as e:
+            logger.error(f"Error generating resume for {job.id}: {e}")
+            pdf_paths.append("")
+            generated_results.append({"id": job.id, "error": str(e)})
+            
+    # Save the entire batch to Supabase under one pipeline run
+    from src.db import save_manual_jobs_batch
+    save_manual_jobs_batch(jobs_to_process, pdf_paths)
+    
+    return jsonify({"results": generated_results})
+
 @app.route('/api/resume/manual/<filename>', methods=['GET'])
 def get_manual_resume(filename):
     manual_dir = os.path.join(os.getcwd(), "output", "manual")
