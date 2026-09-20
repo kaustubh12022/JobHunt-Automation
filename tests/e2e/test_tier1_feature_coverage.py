@@ -28,11 +28,11 @@ def test_f1_1_model_name_alignment():
     config = load_config()
     ai_cfg = config.get("ai", {})
     assert ai_cfg.get("scoring_model") == "deepseek-chat", "Scoring model must be deepseek-chat"
-    assert ai_cfg.get("tailoring_model") == "deepseek-reasoner", "Tailoring model must be deepseek-reasoner"
+    assert ai_cfg.get("tailoring_model") == "deepseek-chat", "Tailoring model must be deepseek-chat"
     assert "deepseek-v4-flash" not in str(config), "Deprecated deepseek-v4-flash must not be present"
     assert "deepseek-v4-pro" not in str(config), "Deprecated deepseek-v4-pro must not be present"
     assert runtime_settings.get("scoring_model") == "deepseek-chat"
-    assert runtime_settings.get("tailoring_model") == "deepseek-reasoner"
+    assert runtime_settings.get("tailoring_model") == "deepseek-chat"
 
 
 def test_f1_2_windows_filename_sanitization():
@@ -508,11 +508,11 @@ def test_f6_5_token_cost_calculation():
 # =====================================================================
 
 def test_f7_1_tailoring_model_invocation():
-    """F7.1: Verify call_ai_tailoring_async uses deepseek-reasoner with thinking enabled."""
+    """F7.1: Verify call_ai_tailoring_async uses deepseek-chat with thinking enabled."""
     config = load_config()
     tailoring_model = config["ai"]["tailoring_model"]
-    assert tailoring_model == "deepseek-reasoner"
-    assert runtime_settings.get("tailoring_model") == "deepseek-reasoner"
+    assert tailoring_model == "deepseek-chat"
+    assert runtime_settings.get("tailoring_model") == "deepseek-chat"
     assert runtime_settings.get("tailoring_thinking") is True
 
 
@@ -817,7 +817,7 @@ def test_f11_4_api_ai_settings_endpoint(flask_client):
     assert "scoring_model" in data
     assert "tailoring_model" in data
     assert data["scoring_model"] == "deepseek-chat"
-    assert data["tailoring_model"] == "deepseek-reasoner"
+    assert data["tailoring_model"] == "deepseek-chat"
 
 
 def test_f11_5_api_manual_tailor_score_endpoint(flask_client):

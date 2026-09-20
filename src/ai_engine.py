@@ -22,7 +22,7 @@ from src.logger import logger
 runtime_settings = {
     "scoring_model": "deepseek-chat",
     "scoring_thinking": False,
-    "tailoring_model": "deepseek-reasoner",
+    "tailoring_model": "deepseek-chat",
     "tailoring_thinking": True,
 }
 
@@ -255,7 +255,7 @@ async def call_ai_tailoring_async(user_prompt: str) -> tuple[str, TokenUsage]:
     master_resume = _get_master_resume()
     
     # Use runtime settings for model and thinking mode
-    tailoring_model = runtime_settings.get("tailoring_model", "deepseek-reasoner")
+    tailoring_model = runtime_settings.get("tailoring_model", "deepseek-chat")
     tailoring_thinking = runtime_settings.get("tailoring_thinking", True)
     thinking_type = "enabled" if tailoring_thinking else "disabled"
     
@@ -276,6 +276,8 @@ async def call_ai_tailoring_async(user_prompt: str) -> tuple[str, TokenUsage]:
             kwargs["response_format"] = {"type": "json_object"}
             if tailoring_thinking:
                 kwargs["extra_body"] = {"thinking": {"type": "enabled"}}
+            else:
+                kwargs["extra_body"] = {"thinking": {"type": "disabled"}}
 
         for attempt in range(3):
             try:
