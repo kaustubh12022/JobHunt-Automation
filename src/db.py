@@ -148,11 +148,12 @@ def save_pipeline_results(pipeline_state, shortlisted_jobs, pdf_paths, all_score
 
     # 2. Insert each shortlisted job + auto-create application
     for job, pdf_path in zip(shortlisted_jobs, pdf_paths):
-        stored_pdf_url = ""
-        
+        # Default to the local path as a safe fallback if no upload happens or upload fails.
+        stored_pdf_url = pdf_path if (pdf_path and os.path.exists(pdf_path)) else ""
+
         # Upload to Supabase Storage if pdf exists and is company_site
         apply_type = (getattr(job, "apply_type", None) or "easy_apply").lower()
-        if apply_type == "company_site" and pdf_path and os.path.exists(pdf_path):
+        if apply_type == "company_site" and stored_pdf_url:
             filename = Path(pdf_path).name
             platform = (getattr(job, "source", None) or "general").lower().replace("workday-", "")
             storage_path = f"{platform}/{apply_type}/{filename}"
@@ -163,7 +164,7 @@ def save_pipeline_results(pipeline_state, shortlisted_jobs, pdf_paths, all_score
                 stored_pdf_url = public_url
             except Exception as e:
                 logger.error(f"Failed to upload {storage_path} to Supabase: {e}")
-                stored_pdf_url = ""
+                # Keep the local path fallback set above
         
         try:
             job_record = supabase.table("tracked_jobs").insert({
