@@ -88,6 +88,11 @@ def main():
     parser.add_argument("--wait-offpeak", action="store_true", help="Wait for offpeak DeepSeek window (default: execute immediately)")
     parser.add_argument("--raw-text", "-t", help="Raw broadcast text or URLs to process in batch tailor mode")
     parser.add_argument("--links-file", "-f", help="File path containing links to process in batch tailor mode")
+    parser.add_argument("--zero-ai", action="store_true", help="Run 100%% deterministic pipeline without calling AI (zero token cost)")
+    parser.add_argument("--dry-run", action="store_true", help="Run without generating PDFs or making permanent changes")
+    parser.add_argument("--strict-3-col", action="store_true", help="Force strictly 3 columns in Job Applications Table")
+    parser.add_argument("--no-tailor", action="store_true", help="Skip resume tailoring")
+    parser.add_argument("--min-score", type=int, default=60, help="Minimum match score threshold (default: 60)")
     args = parser.parse_args()
 
     is_batch_mode = bool(args.raw_text or args.links_file)
@@ -121,6 +126,8 @@ def main():
                 cmd.extend(["--raw-text", args.raw_text])
             elif args.links_file:
                 cmd.extend(["--links-file", args.links_file])
+            if args.min_score:
+                cmd.extend(["--min-score", str(args.min_score)])
         else:
             cmd = [
                 sys.executable,
@@ -132,6 +139,14 @@ def main():
                 cmd.append("--no-wait-offpeak")
             if args.test_mode:
                 cmd.append("--test-mode")
+            if args.zero_ai:
+                cmd.append("--zero-ai")
+            if args.dry_run:
+                cmd.append("--dry-run")
+            if args.strict_3_col:
+                cmd.append("--strict-3-col")
+            if args.no_tailor:
+                cmd.append("--no-tailor")
 
         logger.info(f"▶️ Executing: {' '.join(cmd)}")
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")

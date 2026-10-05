@@ -123,6 +123,10 @@ def main():
         platforms = [p.strip().lower() for p in args.platforms.split(",") if p.strip()]
     elif test_mode:
         platforms = config.get('test_mode', {}).get('platforms', ["internshala", "unstop", "hirist", "naukri"])
+    else:
+        platforms = config.get('search', {}).get('platforms', ["naukri", "instahyre", "internshala", "unstop", "hirist", "workday", "linkedin", "indeed"])
+
+    if test_mode:
         orig_load_config = scraper_module.load_config
         def test_mode_load_config():
             cfg = orig_load_config()
@@ -132,8 +136,6 @@ def main():
             cfg['search']['results_wanted'] = cfg.get('test_mode', {}).get('results_wanted', 5)
             return cfg
         scraper_module.load_config = test_mode_load_config
-    else:
-        platforms = config.get('search', {}).get('platforms', ["naukri", "instahyre", "internshala", "unstop", "hirist", "workday", "linkedin", "indeed"])
     
     # Set up live callbacks for scraping progress
     scraped_counter = {"count": 0}
