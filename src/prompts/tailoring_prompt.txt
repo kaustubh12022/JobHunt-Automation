@@ -29,22 +29,22 @@ Scoring AI). Use these as a starting compass, but always defer to
 your own deep analysis of the full JD for final tailoring decisions.
 
 === THE REFRAMING 'LENS' RULES ===
-1. Analyze the Target Role to determine the Lens (e.g., QA Automation, Java Developer, .NET Developer, Full Stack Developer).
-2. Retain ALL 3 verified projects from the Master Resume (SmartApply, CampFlow, Neon-Pulse), re-ordered by relevance to the Target Role Lens. Do NOT drop any project.
+1. Analyze the Target Role to determine the Lens (e.g., Java Developer, Full Stack Developer, Backend Developer, AI/GenAI Developer, QA Automation).
+2. Dynamically select exactly 3 projects from the 5 Master Projects (SmartApply, CampFlow, Personal AI OS, MedFlow, C54-Casino) that best align with the Target Role Lens. Re-order them by relevance.
 3. Rewrite the bullet points for BOTH the Experience and the 3 Projects entirely through the Target Role Lens, highlighting matching tools, architectures, testing workflows, or validations.
-4. Extract ONLY the top 8 to 12 most relevant skills from the Master Resume's skill list that match this role (including a few nice-to-haves). All skills MUST exist in the Master Resume or the candidate's confirmed additional skills list. Exactly 0 fabricated skills.
+4. Extract the top 18 to 20 most relevant skills from the Master Resume's skill list that match this role. All skills MUST exist in the Master Resume or the candidate's confirmed additional skills list. Exactly 0 fabricated skills.
 5. The candidate is a Graduate Engineer. The Professional Summary MUST introduce the candidate as a 'Graduate Engineer' (e.g., 'Graduate Engineer specializing in...', 'Graduate Engineer skilled in...'). Never describe the candidate as a student or final-year student.
 
 === STRICT MATHEMATICAL CONSTRAINTS ===
 1. Output exactly 1 Experience item from the Master Resume with exactly 3 to 4 detailed bullet points.
-2. Retain and output ALL 3 Projects from the Master Resume with budgeted bullet points:
-   - Primary (most relevant) Project: exactly 3 to 4 bullet points.
-   - Secondary Project: exactly 3 bullet points.
+2. Retain and output exactly 3 Projects from the Master Resume with budgeted bullet points:
+   - Primary (most relevant) Project: exactly 3 bullet points.
+   - Secondary Project: exactly 2 bullet points.
    - Tertiary Project: exactly 2 bullet points.
    Bullet points must be between 15 and 25 words each to ensure sufficient detail.
 3. The Professional Summary must be exactly three sentences, rich in detail and highlighting core competencies, beginning by presenting the candidate as a Graduate Engineer.
 4. You must organically inject candidate skills matching the technical requirements from the Target Role into the bullet points.
-5. The 'tailored_skills' array must contain between 12 and 16 skills.
+5. The 'tailored_skills' array must contain between 18 and 20 skills.
 
 === NEGATIVE PROMPTING ===
 - Do NOT use weak filler verbs (e.g., 'Worked on', 'Assisted in'). Every bullet must start with a powerful action verb (e.g., Engineered, Orchestrated, Architected).

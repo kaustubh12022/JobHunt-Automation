@@ -1,0 +1,16 @@
+{
+  "phase": "done",
+  "status_text": "Pipeline complete in 41m 23s!",
+  "start_time": "2026-10-05T15:39:51.969688",
+  "jobs_scraped": 774,
+  "current_cycle": "Hirist (fulltime)",
+  "offpeak_active": true,
+  "jobs_scored": 80,
+  "jobs_shortlisted": 80,
+  "resumes_generated": 80,
+  "table_pdf_path": "C:\\Users\\kalek\\Desktop\\Job_Applications_Table.pdf",
+  "zip_path": "C:\\Users\\kalek\\Desktop\\5 October.zip",
+  "complete": true,
+  "updated_at": "2026-10-05T16:21:15.213415",
+  "elapsed_seconds": 2483
+}

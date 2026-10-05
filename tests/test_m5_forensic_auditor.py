@@ -176,7 +176,7 @@ def test_forensic_ats_plain_text_content(tmp_path, candidate_data, jobs_200_fixt
     text = reader.pages[0].extract_text()
 
     # ATS Headings
-    headings = ["PROFILE SUMMARY", "TECHNICAL SKILLS", "WORK EXPERIENCE", "TECHNICAL PROJECTS", "EDUCATION", "CERTIFICATIONS"]
+    headings = ["PROFILE SUMMARY", "TECHNICAL SKILLS", "WORK EXPERIENCE", "PROJECTS", "EDUCATION", "CERTIFICATIONS"]
     for h in headings:
         assert h in text, f"Missing heading: {h}"
 
@@ -196,7 +196,7 @@ def test_forensic_ats_plain_text_content(tmp_path, candidate_data, jobs_200_fixt
 
     # Role order: for QA, WORK EXPERIENCE comes before TECHNICAL PROJECTS
     idx_exp = text.find("WORK EXPERIENCE")
-    idx_proj = text.find("TECHNICAL PROJECTS")
+    idx_proj = text.find("PROJECTS")
     assert idx_exp < idx_proj, "For QA role, WORK EXPERIENCE must appear before TECHNICAL PROJECTS"
 
 
@@ -206,6 +206,7 @@ def test_forensic_adversarial_stress_layout_and_sanitization(tmp_path, candidate
     ad_data = copy.deepcopy(candidate_data)
 
     # 1. Stress: Max candidate skills (14 skills)
+    ad_data.pop("skills_structured", None)
     ad_data["skills"] = [
         "Python", "Java", "C#", "SQL", "Selenium WebDriver", "Postman",
         "Jira", "Git", "GitHub Actions", "Docker", "Linux", "REST APIs", "Agile/Scrum", "DSA"

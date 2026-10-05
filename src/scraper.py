@@ -41,7 +41,21 @@ from src.models import Job
 from src.config_loader import load_config
 from src.scrapers.workday import scrape_workday
 from src.scrapers.jsonld import scrape_jsonld
+from src.scrapers.naukri import scrape_naukri
+from src.scrapers.instahyre import scrape_instahyre
+from src.scrapers.internshala import scrape_internshala
+from src.scrapers.unstop import scrape_unstop
+from src.scrapers.hirist import scrape_hirist
 from src.scorer import is_relevant_jd, matches_senior_title, requires_3_plus_years
+
+
+_LAST_RAW_JOBS: list[Job] = []
+
+
+def get_last_raw_jobs() -> list[Job]:
+    """Retrieve the complete list of all raw jobs collected during the most recent scrape."""
+    global _LAST_RAW_JOBS
+    return list(_LAST_RAW_JOBS)
 
 
 TRACKING_PARAMS = {
@@ -173,6 +187,9 @@ REMOTE_PATTERNS = [
     r"\bhybrid\b",
     r"\bwork\s+from\s+home\b",
     r"\bwfh\b",
+    r"\bfully\s+remote\b",
+    r"\bremote\s*[-—–]?\s*india\b",
+    r"\bremote\s*[-—–]?\s*worldwide\b",
     r"\banywhere\b",
     r"\bpan[- ]?india\b",
 ]
@@ -217,6 +234,7 @@ def apply_pandas_filter(jobs: list[Job], locations: list[str], callbacks=None, t
             "url": j.url,
             "source": j.source,
             "job_type": getattr(j, "job_type", "fulltime"),
+            "apply_type": getattr(j, "apply_type", "easy_apply"),
             "date_posted": getattr(j, "date_posted", None),
             "is_remote": getattr(j, "is_remote", False)
         })
@@ -249,13 +267,23 @@ def apply_pandas_filter(jobs: list[Job], locations: list[str], callbacks=None, t
         combined_df = combined_df[~stale_mask]
 
     # 3. Location Filter: Target cities with comprehensive Indian regional aliases OR Remote/Hybrid
+    # Strict Invariant: Remote jobs (Remote, Work From Home, WFH, Fully Remote, Remote - India, Remote - Worldwide)
+    # must NEVER be rejected.
     if 'location' in combined_df.columns and locations:
         location_pattern = build_location_regex(locations)
         is_remote_mask = pd.Series(False, index=combined_df.index)
         if 'is_remote' in combined_df.columns:
-            is_remote_mask = combined_df['is_remote'] == True
+            is_remote_mask = (combined_df['is_remote'] == True) | (combined_df['is_remote'].astype(str).str.lower().isin(['true', '1', 'yes']))
 
-        loc_mask = combined_df['location'].astype(str).str.contains(location_pattern, case=False, na=False) | is_remote_mask
+        remote_regex = r'(?i)\b(?:remote|work\s+from\s+home|wfh|fully\s+remote|remote\s*[-—–]?\s*india|remote\s*[-—–]?\s*worldwide|anywhere|pan[- ]?india)\b'
+        remote_text_mask = combined_df['location'].astype(str).str.contains(remote_regex, na=False)
+        if 'title' in combined_df.columns:
+            remote_text_mask = remote_text_mask | combined_df['title'].astype(str).str.contains(remote_regex, na=False)
+        if 'description' in combined_df.columns:
+            desc_remote = combined_df['description'].astype(str).str.contains(r'(?i)\b(?:fully\s+remote|work\s+from\s+home|100%\s+remote|remote\s+role)\b', na=False)
+            remote_text_mask = remote_text_mask | desc_remote
+
+        loc_mask = combined_df['location'].astype(str).str.contains(location_pattern, case=False, na=False) | is_remote_mask | remote_text_mask
         dropped_loc = (~loc_mask).sum()
         if dropped_loc > 0:
             logger.info(f"   [Location] Dropped {dropped_loc} jobs with mismatched locations (not in target cities or remote)")
@@ -264,7 +292,7 @@ def apply_pandas_filter(jobs: list[Job], locations: list[str], callbacks=None, t
                     callbacks["on_job_dropped"](row.get("title"), row.get("company"), "Location mismatch")
         combined_df = combined_df[loc_mask]
 
-    # 4. Anti-Senior Title Filter (with explicit title experience checking)
+    # 4. Anti-Senior Title Filter
     if 'title' in combined_df.columns:
         senior_mask = combined_df['title'].apply(matches_senior_title).astype(bool)
         dropped_df = combined_df[senior_mask]
@@ -336,7 +364,8 @@ def apply_pandas_filter(jobs: list[Job], locations: list[str], callbacks=None, t
             description=str(row.get("description")),
             url=str(row.get("url")),
             source=str(row.get("source")),
-            job_type=str(row.get("job_type"))
+            job_type=str(row.get("job_type")),
+            apply_type=str(row.get("apply_type", "easy_apply"))
         )
         job.date_posted = row.get("date_posted")
         job.is_remote = row.get("is_remote", False)
@@ -345,7 +374,71 @@ def apply_pandas_filter(jobs: list[Job], locations: list[str], callbacks=None, t
     return filtered_jobs
 
 
-def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=False, callbacks=None, stop_event=None) -> list[Job]:
+def fetch_linkedin_details(job_url: str, proxies: list = None) -> tuple[str, bool or None, pd.Timestamp or None]:
+    """Fetch full job description, apply type, and posting timestamp from LinkedIn job page."""
+    if not job_url:
+        return "", None, None
+    import requests
+    from bs4 import BeautifulSoup
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9"
+    }
+    proxy_dict = None
+    if proxies and isinstance(proxies, list) and len(proxies) > 0:
+        p = random.choice(proxies)
+        proxy_dict = {"http": p, "https": p}
+    try:
+        resp = requests.get(job_url, headers=headers, proxies=proxy_dict, timeout=6)
+        if resp.status_code == 200:
+            soup = BeautifulSoup(resp.text, "html.parser")
+            desc = ""
+            div = soup.find("div", class_=lambda x: x and "show-more-less-html__markup" in x)
+            if div:
+                desc = clean_html(div.prettify(formatter="html"))
+            
+            # Check for Easy Apply button vs external Apply button
+            is_easy_apply = False
+            for b in soup.select("button, a"):
+                txt = b.get_text(strip=True).lower()
+                classes = " ".join(b.get("class", [])) if isinstance(b.get("class"), list) else str(b.get("class", ""))
+                if "easy apply" in txt or "easy-apply" in classes:
+                    is_easy_apply = True
+                    break
+            
+            # Check for posted time
+            posted_dt = None
+            time_el = soup.select_one(".posted-time-ago__text, time")
+            if time_el:
+                time_str = time_el.get_text(strip=True).lower()
+                hour_m = re.search(r'(\d+)\s*(?:hour|minute|m|h)', time_str)
+                day_m = re.search(r'(\d+)\s*day', time_str)
+                week_m = re.search(r'(\d+)\s*week', time_str)
+                month_m = re.search(r'(\d+)\s*month', time_str)
+                if "just" in time_str or "today" in time_str:
+                    posted_dt = pd.Timestamp.now(tz="UTC")
+                elif hour_m:
+                    posted_dt = pd.Timestamp.now(tz="UTC") - pd.Timedelta(hours=int(hour_m.group(1)))
+                elif day_m:
+                    posted_dt = pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=int(day_m.group(1)))
+                elif week_m:
+                    posted_dt = pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=int(week_m.group(1)) * 7)
+                elif month_m:
+                    posted_dt = pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=int(month_m.group(1)) * 30)
+
+            return desc, is_easy_apply, posted_dt
+    except Exception as e:
+        logger.debug(f"Targeted LinkedIn details fetch failed for {job_url}: {e}")
+    return "", None, None
+
+
+def fetch_linkedin_description(job_url: str, proxies: list = None) -> str:
+    """Fetch full job description from LinkedIn job page for surviving cards."""
+    desc, _, _ = fetch_linkedin_details(job_url, proxies=proxies)
+    return desc
+
+
+def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=False, callbacks=None, stop_event=None, hours_old=None) -> list[Job]:
     """
     Scrapes jobs from all sources, handling Full-Time and Internship blocks separately.
     """
@@ -356,7 +449,7 @@ def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=Fals
     locations = search_cfg.get('locations', ["Pune"])
     job_types = selected_job_types if selected_job_types is not None else search_cfg.get('job_types', ["fulltime", "internship"])
     proxies = search_cfg.get('proxies', [])
-    hours_old = search_cfg.get('hours_old', 72)
+    hours_old = hours_old if hours_old is not None else search_cfg.get('hours_old', 72)
 
     platforms = selected_platforms if selected_platforms is not None else search_cfg.get('platforms', ["linkedin", "indeed"])
     
@@ -366,6 +459,8 @@ def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=Fals
     # per-location calls (results_per_loc × n_locations = effective session limit).
     results_wanted_batched = results_wanted_per_loc * len(locations)
     
+    global _LAST_RAW_JOBS
+    _LAST_RAW_JOBS = []
     all_raw_jobs = []
     
     # Pre-calculate total cycles across ALL job types for accurate progress tracking
@@ -375,18 +470,18 @@ def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=Fals
     global_total_cycles = 0
     batched_location = ", ".join(locations)  # e.g. "Pune, Mumbai, Bangalore"
     logger.info(f"📊 Session limit: {results_wanted_per_loc}/loc × {len(locations)} locs = {results_wanted_batched} results per batched call")
+    NON_JOBSPY_PLATFORMS = {"workday", "jsonld", "naukri", "instahyre", "internshala", "unstop", "hirist"}
     for jt in job_types:
         if stop_event and stop_event.is_set():
             break
-        jobspy_plats = [p for p in platforms if p not in ["workday", "jsonld"]]
+        jobspy_plats = [p for p in platforms if p not in NON_JOBSPY_PLATFORMS]
         if jt == "internship" and "linkedin" in jobspy_plats:
             jobspy_plats.remove("linkedin")
         if jobspy_plats:
             global_total_cycles += len(search_terms) if not test_mode else 1
-        if "workday" in platforms:
-            global_total_cycles += 1
-        if "jsonld" in platforms:
-            global_total_cycles += 1
+        for extra_plat in ["workday", "jsonld", "naukri", "instahyre", "internshala", "unstop", "hirist"]:
+            if extra_plat in platforms:
+                global_total_cycles += 1
     
     for jt in job_types:
         if stop_event and stop_event.is_set():
@@ -395,7 +490,7 @@ def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=Fals
         logger.info(f"⚡ Processing Job Category: {jt.upper()}")
         
         # 1. JobSpy Module
-        jobspy_platforms = [p for p in platforms if p not in ["workday", "jsonld"]]
+        jobspy_platforms = [p for p in platforms if p not in NON_JOBSPY_PLATFORMS]
         if jt == "internship" and "linkedin" in jobspy_platforms:
             jobspy_platforms.remove("linkedin")
             
@@ -430,6 +525,8 @@ def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=Fals
                     """Fire one JobSpy call and collect results into all_raw_jobs."""
                     if not site_list: return
                     if stop_event and stop_event.is_set(): return
+                    is_linkedin_call = site_list == ["linkedin"] or site_list == "linkedin" or (isinstance(site_list, list) and "linkedin" in site_list and len(site_list) == 1)
+                    fetch_desc = False if is_linkedin_call else True
                     try:
                         df = _scrape_with_retry({
                             "site_name": site_list,
@@ -439,15 +536,60 @@ def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=Fals
                             "results_wanted": results_per_call,
                             "hours_old": hours_old,
                             "country_indeed": search_cfg.get('country_indeed', 'India'),
-                            "linkedin_fetch_description": True,
+                            "linkedin_fetch_description": fetch_desc,
                             "proxies": proxies if proxies else None
                         })
                         if not df.empty:
                             for _, row in df.iterrows():
                                 if stop_event and stop_event.is_set(): break
-                                desc = clean_html(row.get("description", ""))
-                                if not desc: continue
+                                raw_desc = row.get("description", "")
+                                desc = clean_html(raw_desc) if pd.notna(raw_desc) else ""
                                 raw_url = str(row.get("job_url", row.get("url", "")))
+
+                                # Two-Stage LinkedIn description & apply_type fetch for title/location survivors
+                                li_is_easy_apply = None
+                                li_posted_dt = None
+                                if is_linkedin_call:
+                                    row_title = str(row.get("title", ""))
+                                    row_loc = str(row.get("location", ""))
+                                    is_remote = bool(row.get("is_remote", False))
+                                    loc_pattern = build_location_regex(locations)
+                                    matches_loc = is_remote or bool(re.search(loc_pattern, row_loc, re.IGNORECASE))
+                                    if not matches_senior_title(row_title) and matches_loc:
+                                        if raw_url:
+                                            li_desc, li_ea, li_dt = fetch_linkedin_details(raw_url, proxies=proxies)
+                                            if not desc and li_desc:
+                                                desc = li_desc
+                                            li_is_easy_apply = li_ea
+                                            li_posted_dt = li_dt
+
+                                raw_dict = {}
+                                try:
+                                    for k, v in row.items():
+                                        if k != "description":
+                                            raw_dict[k] = str(v) if pd.notna(v) else None
+                                except Exception:
+                                    pass
+
+                                # Determine easy_apply vs company_site for JobSpy
+                                if li_is_easy_apply is not None:
+                                    js_apply_type = "easy_apply" if li_is_easy_apply else "company_site"
+                                else:
+                                    is_direct = bool(row.get("is_direct_apply", False))
+                                    direct_url = str(row.get("job_url_direct", "") or "").lower()
+                                    if is_direct:
+                                        js_apply_type = "easy_apply"
+                                    elif direct_url and any(ats in direct_url for ats in ["workday", "greenhouse", "lever", "smartrecruiters", "icims", "taleo", "brassring", "myworkdayjobs"]):
+                                        js_apply_type = "company_site"
+                                    elif direct_url and direct_url.startswith("http"):
+                                        js_apply_type = "company_site"
+                                    else:
+                                        js_apply_type = "easy_apply" if is_direct else "company_site"
+
+                                row_posted = row.get("date_posted")
+                                if (pd.isna(row_posted) or not row_posted) and li_posted_dt:
+                                    row_posted = li_posted_dt
+
                                 job = Job(
                                     id=str(uuid.uuid4()),
                                     title=str(row.get("title", "Unknown")),
@@ -456,13 +598,21 @@ def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=Fals
                                     description=desc,
                                     url=normalize_url(raw_url) if raw_url else "",
                                     source=str(row.get("site", "jobspy")),
-                                    job_type=jt
+                                    job_type=jt,
+                                    apply_type=js_apply_type,
+                                    date_posted=row_posted,
+                                    is_remote=bool(row.get("is_remote", False)),
+                                    raw_metadata=raw_dict
                                 )
-                                job.date_posted = row.get("date_posted")
-                                job.is_remote = row.get("is_remote", False)
                                 all_raw_jobs.append(job)
+                                _LAST_RAW_JOBS.append(job)
+                                if callbacks and "on_raw_job" in callbacks:
+                                    try:
+                                        callbacks["on_raw_job"](job)
+                                    except Exception:
+                                        pass
                                 if callbacks and "on_job_scraped" in callbacks:
-                                    callbacks["on_job_scraped"]({"title": job.title, "company": job.company, "platform": job.source, "cycle": cycle_label})
+                                    callbacks["on_job_scraped"]({"title": job.title, "company": job.company, "platform": job.source, "cycle": cycle_label, "job": job})
                     except Exception as e:
                         logger.error(f"   [Error] Error scraping JobSpy {site_list} for '{term}' in '{scrape_loc}': {e}")
                         if callbacks and "on_error" in callbacks:
@@ -504,13 +654,18 @@ def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=Fals
                 workday_queries = [f"{q} intern" for q in search_terms] + ["intern", "internship"]
                 
             try:
-                wd_jobs = scrape_workday(queries=workday_queries, test_mode=test_mode, max_results_per_query=results_wanted_per_loc)
+                wd_jobs = scrape_workday(queries=workday_queries, test_mode=test_mode, max_results_per_query=min(results_wanted_per_loc, 20), hours_old=hours_old)
                 for w_job in wd_jobs:
                     w_job.job_type = jt
-                    w_job.date_posted = pd.Timestamp.now(tz="UTC") # Workday API may not provide exact date in simple JSON, assume fresh
                     all_raw_jobs.append(w_job)
+                    _LAST_RAW_JOBS.append(w_job)
+                    if callbacks and "on_raw_job" in callbacks:
+                        try:
+                            callbacks["on_raw_job"](w_job)
+                        except Exception:
+                            pass
                     if callbacks and "on_job_scraped" in callbacks:
-                        callbacks["on_job_scraped"]({"title": w_job.title, "company": w_job.company, "platform": w_job.source, "cycle": cycle_label})
+                        callbacks["on_job_scraped"]({"title": w_job.title, "company": w_job.company, "platform": w_job.source, "cycle": cycle_label, "job": w_job})
             except Exception as e:
                 logger.error(f"   [Error] Error scraping Workday: {e}")
                 if callbacks and "on_error" in callbacks:
@@ -525,12 +680,132 @@ def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=Fals
                 jld_jobs = scrape_jsonld(test_mode=test_mode)
                 for j_job in jld_jobs:
                     j_job.job_type = jt
-                    j_job.date_posted = pd.Timestamp.now(tz="UTC")
                     all_raw_jobs.append(j_job)
+                    _LAST_RAW_JOBS.append(j_job)
+                    if callbacks and "on_raw_job" in callbacks:
+                        try:
+                            callbacks["on_raw_job"](j_job)
+                        except Exception:
+                            pass
                     if callbacks and "on_job_scraped" in callbacks:
-                        callbacks["on_job_scraped"]({"title": j_job.title, "company": j_job.company, "platform": j_job.source, "cycle": cycle_label})
+                        callbacks["on_job_scraped"]({"title": j_job.title, "company": j_job.company, "platform": j_job.source, "cycle": cycle_label, "job": j_job})
             except Exception as e:
                 logger.error(f"   [Error] Error scraping JSON-LD: {e}")
+                if callbacks and "on_error" in callbacks:
+                    callbacks["on_error"](str(e))
+
+        # 4. Naukri Module
+        if "naukri" in platforms:
+            cycle_label = f"Naukri ({jt})"
+            if callbacks and "on_cycle_start" in callbacks:
+                callbacks["on_cycle_start"]({"cycle_label": cycle_label, "platforms": ["naukri"], "jt": jt, "term": "Naukri Search", "loc": batched_location})
+            try:
+                n_terms = search_terms if not test_mode else [search_terms[0]]
+                n_jobs = scrape_naukri(search_terms=n_terms, locations=locations, job_type=jt, max_results_per_query=results_wanted_per_loc, hours_old=hours_old)
+                for n_job in n_jobs:
+                    all_raw_jobs.append(n_job)
+                    _LAST_RAW_JOBS.append(n_job)
+                    if callbacks and "on_raw_job" in callbacks:
+                        try:
+                            callbacks["on_raw_job"](n_job)
+                        except Exception:
+                            pass
+                    if callbacks and "on_job_scraped" in callbacks:
+                        callbacks["on_job_scraped"]({"title": n_job.title, "company": n_job.company, "platform": n_job.source, "cycle": cycle_label, "job": n_job})
+            except Exception as e:
+                logger.error(f"   [Error] Error scraping Naukri: {e}")
+                if callbacks and "on_error" in callbacks:
+                    callbacks["on_error"](str(e))
+
+        # 5. Instahyre Module
+        if "instahyre" in platforms:
+            cycle_label = f"Instahyre ({jt})"
+            if callbacks and "on_cycle_start" in callbacks:
+                callbacks["on_cycle_start"]({"cycle_label": cycle_label, "platforms": ["instahyre"], "jt": jt, "term": "Instahyre Search", "loc": batched_location})
+            try:
+                i_terms = search_terms if not test_mode else [search_terms[0]]
+                i_jobs = scrape_instahyre(search_terms=i_terms, locations=locations, job_type=jt, max_results_per_query=results_wanted_per_loc, hours_old=hours_old)
+                for i_job in i_jobs:
+                    all_raw_jobs.append(i_job)
+                    _LAST_RAW_JOBS.append(i_job)
+                    if callbacks and "on_raw_job" in callbacks:
+                        try:
+                            callbacks["on_raw_job"](i_job)
+                        except Exception:
+                            pass
+                    if callbacks and "on_job_scraped" in callbacks:
+                        callbacks["on_job_scraped"]({"title": i_job.title, "company": i_job.company, "platform": i_job.source, "cycle": cycle_label, "job": i_job})
+            except Exception as e:
+                logger.error(f"   [Error] Error scraping Instahyre: {e}")
+                if callbacks and "on_error" in callbacks:
+                    callbacks["on_error"](str(e))
+
+        # 6. Internshala Module
+        if "internshala" in platforms:
+            cycle_label = f"Internshala ({jt})"
+            if callbacks and "on_cycle_start" in callbacks:
+                callbacks["on_cycle_start"]({"cycle_label": cycle_label, "platforms": ["internshala"], "jt": jt, "term": "Internshala Search", "loc": batched_location})
+            try:
+                in_terms = search_terms if not test_mode else [search_terms[0]]
+                in_jobs = scrape_internshala(search_terms=in_terms, locations=locations, job_type=jt, max_results_per_query=results_wanted_per_loc, hours_old=hours_old)
+                for in_job in in_jobs:
+                    all_raw_jobs.append(in_job)
+                    _LAST_RAW_JOBS.append(in_job)
+                    if callbacks and "on_raw_job" in callbacks:
+                        try:
+                            callbacks["on_raw_job"](in_job)
+                        except Exception:
+                            pass
+                    if callbacks and "on_job_scraped" in callbacks:
+                        callbacks["on_job_scraped"]({"title": in_job.title, "company": in_job.company, "platform": in_job.source, "cycle": cycle_label, "job": in_job})
+            except Exception as e:
+                logger.error(f"   [Error] Error scraping Internshala: {e}")
+                if callbacks and "on_error" in callbacks:
+                    callbacks["on_error"](str(e))
+
+        # 7. Unstop Module
+        if "unstop" in platforms:
+            cycle_label = f"Unstop ({jt})"
+            if callbacks and "on_cycle_start" in callbacks:
+                callbacks["on_cycle_start"]({"cycle_label": cycle_label, "platforms": ["unstop"], "jt": jt, "term": "Unstop Search", "loc": batched_location})
+            try:
+                u_terms = search_terms if not test_mode else [search_terms[0]]
+                u_jobs = scrape_unstop(search_terms=u_terms, locations=locations, job_type=jt, max_results_per_query=results_wanted_per_loc, hours_old=hours_old)
+                for u_job in u_jobs:
+                    all_raw_jobs.append(u_job)
+                    _LAST_RAW_JOBS.append(u_job)
+                    if callbacks and "on_raw_job" in callbacks:
+                        try:
+                            callbacks["on_raw_job"](u_job)
+                        except Exception:
+                            pass
+                    if callbacks and "on_job_scraped" in callbacks:
+                        callbacks["on_job_scraped"]({"title": u_job.title, "company": u_job.company, "platform": u_job.source, "cycle": cycle_label, "job": u_job})
+            except Exception as e:
+                logger.error(f"   [Error] Error scraping Unstop: {e}")
+                if callbacks and "on_error" in callbacks:
+                    callbacks["on_error"](str(e))
+
+        # 8. Hirist Module
+        if "hirist" in platforms:
+            cycle_label = f"Hirist ({jt})"
+            if callbacks and "on_cycle_start" in callbacks:
+                callbacks["on_cycle_start"]({"cycle_label": cycle_label, "platforms": ["hirist"], "jt": jt, "term": "Hirist Search", "loc": batched_location})
+            try:
+                h_terms = search_terms if not test_mode else [search_terms[0]]
+                h_jobs = scrape_hirist(search_terms=h_terms, locations=locations, job_type=jt, max_results_per_query=results_wanted_per_loc, hours_old=hours_old)
+                for h_job in h_jobs:
+                    all_raw_jobs.append(h_job)
+                    _LAST_RAW_JOBS.append(h_job)
+                    if callbacks and "on_raw_job" in callbacks:
+                        try:
+                            callbacks["on_raw_job"](h_job)
+                        except Exception:
+                            pass
+                    if callbacks and "on_job_scraped" in callbacks:
+                        callbacks["on_job_scraped"]({"title": h_job.title, "company": h_job.company, "platform": h_job.source, "cycle": cycle_label, "job": h_job})
+            except Exception as e:
+                logger.error(f"   [Error] Error scraping Hirist: {e}")
                 if callbacks and "on_error" in callbacks:
                     callbacks["on_error"](str(e))
 

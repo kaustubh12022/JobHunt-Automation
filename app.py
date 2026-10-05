@@ -170,11 +170,11 @@ def pipeline_log_interceptor(message):
     text_lower = text.lower()
     
     pipeline_state["status_text"] = text
-    if "scraping" in text_lower and "linkedin" in text_lower:
-        pipeline_state["scan"]["current_platform"] = "linkedin"
-    elif "scraping" in text_lower and "indeed" in text_lower:
-        pipeline_state["scan"]["current_platform"] = "indeed"
-    elif "pre-filter" in text_lower:
+    for plat in ["linkedin", "indeed", "workday", "naukri", "instahyre", "internshala", "unstop", "hirist", "jsonld"]:
+        if plat in text_lower:
+            pipeline_state["scan"]["current_platform"] = plat
+            break
+    if "pre-filter" in text_lower or "filtering" in text_lower:
         pipeline_state["phase"] = "filtering"
 
 # Add the interceptor to Loguru
@@ -243,7 +243,7 @@ callbacks = {
 # ══════════════════════════════════════════════
 # PRODUCTION PIPELINE
 # ══════════════════════════════════════════════
-def run_pipeline(platforms, job_types=None, dry_run=False, test_mode=False):
+def run_pipeline(platforms, job_types=None, dry_run=False, test_mode=False, hours_old=None, zero_ai=False):
     """Background thread that runs the full pipeline for both PROD and TEST modes."""
     global pipeline_state
     try:
@@ -258,15 +258,13 @@ def run_pipeline(platforms, job_types=None, dry_run=False, test_mode=False):
         pipeline_state["tailor"]["results"] = []
         
         mode_label = " [TEST MODE]" if test_mode else ""
-        logger.info(f"🚀 Pipeline started!{mode_label}")
+        ai_label = " [ZERO-AI DETERMINISTIC]" if zero_ai else " [AI ENABLED]"
+        logger.info(f"🚀 Pipeline started!{mode_label}{ai_label}")
 
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         logger.info("PHASE 1/4: SCRAPING JOBS")
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        jobs, scrape_stats = run_scraper(selected_platforms=platforms, selected_job_types=job_types, test_mode=test_mode, callbacks=callbacks, stop_event=stop_event)
-        # NOTE: Do NOT overwrite total_found here — the on_job_scraped callback
-        # is the single source of truth and has been incrementing it live.
-        # Overwriting caused the UI counter to jump erratically.
+        jobs, scrape_stats = run_scraper(selected_platforms=platforms, selected_job_types=job_types, test_mode=test_mode, callbacks=callbacks, stop_event=stop_event, hours_old=hours_old)
         pipeline_state["filter"]["after"] = scrape_stats.get("reached_scoring", len(jobs))
 
         if stop_event.is_set():
@@ -282,13 +280,13 @@ def run_pipeline(platforms, job_types=None, dry_run=False, test_mode=False):
 
         pipeline_state["phase"] = "scoring"
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        logger.info("PHASE 2/4: AI SCORING")
+        logger.info(f"PHASE 2/4: {'DETERMINISTIC' if zero_ai else 'AI'} SCORING")
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         
         if test_mode:
             logger.info("🧪 TEST MODE: Scoring all jobs, but limiting resumes to 3.")
             
-        scored_jobs = score_jobs(jobs, test_mode=test_mode, callbacks=callbacks, stop_event=stop_event)
+        scored_jobs = score_jobs(jobs, test_mode=test_mode, callbacks=callbacks, stop_event=stop_event, use_ai=not zero_ai)
 
         if stop_event.is_set():
             logger.info("🛑 Pipeline aborted during scoring phase.")
@@ -302,6 +300,9 @@ def run_pipeline(platforms, job_types=None, dry_run=False, test_mode=False):
                 "title": getattr(j, "title", ""),
                 "company": getattr(j, "company", ""),
                 "location": getattr(j, "location", ""),
+                "source": getattr(j, "source", "general") or "general",
+                "apply_type": getattr(j, "apply_type", "easy_apply") or "easy_apply",
+                "url": getattr(j, "url", "") or "",
                 "score": getattr(j, "score", 0),
                 "reasons": getattr(j, "reasons", []),
                 "summary": get_single_sentence_summary(j),
@@ -345,6 +346,7 @@ def run_pipeline(platforms, job_types=None, dry_run=False, test_mode=False):
             pending_pipeline_data["dry_run"] = dry_run
             pending_pipeline_data["test_mode"] = test_mode
             pending_pipeline_data["scored_jobs"] = scored_jobs
+            pending_pipeline_data["zero_ai"] = zero_ai
             pending_pipeline_data["user_selections"] = None
 
             pipeline_state["shortlisted_jobs"] = [
@@ -353,6 +355,8 @@ def run_pipeline(platforms, job_types=None, dry_run=False, test_mode=False):
                     "title": getattr(j, "title", ""),
                     "company": getattr(j, "company", ""),
                     "location": getattr(j, "location", ""),
+                    "source": getattr(j, "source", "general") or "general",
+                    "apply_type": getattr(j, "apply_type", "easy_apply") or "easy_apply",
                     "score": getattr(j, "score", 0),
                     "reasons": getattr(j, "reasons", []),
                     "summary": get_single_sentence_summary(j),
@@ -414,8 +418,8 @@ def run_pipeline(platforms, job_types=None, dry_run=False, test_mode=False):
             path = "audit.log"
             
             from src.resume_tailor import tailor_resumes_batch
-            logger.info("   [Batch] Starting concurrent AI tailoring for dry run...")
-            tailored_jsons = tailor_resumes_batch(shortlisted, stop_event=stop_event)
+            logger.info(f"   [Batch] Starting {'deterministic rule-lens' if zero_ai else 'concurrent AI'} tailoring for dry run...")
+            tailored_jsons = tailor_resumes_batch(shortlisted, stop_event=stop_event, use_ai=not zero_ai)
             
             with open("audit.log", "a", encoding="utf-8") as f:
                 f.write(f"\n\n{'='*50}\n")
@@ -442,8 +446,8 @@ def run_pipeline(platforms, job_types=None, dry_run=False, test_mode=False):
             try:
                 from src.resume_tailor import tailor_resumes_batch
                 
-                logger.info(f"   [Batch] Requesting {len(shortlisted)} resumes from DeepSeek concurrently...")
-                tailored_jsons = tailor_resumes_batch(shortlisted, stop_event=stop_event)
+                logger.info(f"   [Batch] Tailoring {len(shortlisted)} resumes ({'Deterministic Rule-Lens' if zero_ai else 'DeepSeek AI'})...")
+                tailored_jsons = tailor_resumes_batch(shortlisted, stop_event=stop_event, use_ai=not zero_ai)
                 
                 with sync_playwright() as p:
                     browser = p.chromium.launch(headless=True)
@@ -549,9 +553,11 @@ def start_pipeline():
         pipeline_state["running"] = True
         pipeline_state["mode"] = "prod"
 
-    platforms = data.get('platforms', ["linkedin", "indeed"])
+    platforms = data.get('platforms', ["linkedin", "indeed", "workday", "naukri", "instahyre", "internshala", "unstop", "hirist", "jsonld"])
     job_types = data.get('job_types', ["fulltime", "internship"])
     dry_run = data.get('dry_run', False)
+    hours_old = data.get('hours_old', 72)
+    zero_ai = data.get('zero_ai', False)
 
     try:
         # Apply AI model settings from frontend
@@ -560,7 +566,7 @@ def start_pipeline():
         resume_generation_event.clear()
         pending_pipeline_data.clear()
         pipeline_state["shortlisted_jobs"] = []
-        thread = threading.Thread(target=run_pipeline, args=(platforms, job_types, dry_run, False))
+        thread = threading.Thread(target=run_pipeline, args=(platforms, job_types, dry_run, False, hours_old, zero_ai))
         thread.daemon = True
         thread.start()
     except Exception as e:
@@ -586,8 +592,10 @@ def start_test_pipeline():
         pipeline_state["running"] = True
         pipeline_state["mode"] = "test"
 
-    platforms = data.get('platforms', ["linkedin", "indeed"])
+    platforms = data.get('platforms', ["linkedin", "indeed", "workday", "naukri", "instahyre", "internshala", "unstop", "hirist", "jsonld"])
     job_types = data.get('job_types', ["fulltime", "internship"])
+    hours_old = data.get('hours_old', 72)
+    zero_ai = data.get('zero_ai', False)
 
     try:
         # Apply AI model settings from frontend
@@ -596,7 +604,7 @@ def start_test_pipeline():
         resume_generation_event.clear()
         pending_pipeline_data.clear()
         pipeline_state["shortlisted_jobs"] = []
-        thread = threading.Thread(target=run_pipeline, args=(platforms, job_types, False, True))
+        thread = threading.Thread(target=run_pipeline, args=(platforms, job_types, False, True, hours_old, zero_ai))
         thread.daemon = True
         thread.start()
     except Exception as e:
@@ -729,7 +737,12 @@ def api_get_resume(job_id):
             
             config = load_config()
             output_dir = os.path.join(config['output']['desktop_path'], config['output']['folder_name'])
-            search_dirs = [os.path.join(output_dir, "main pipeline"), os.path.join(output_dir, "test")]
+            search_dirs = [
+                os.path.join(output_dir, "main pipeline"),
+                os.path.join(output_dir, "test"),
+                os.path.join(os.getcwd(), "output", "resumes"),
+                os.path.join(os.getcwd(), "output")
+            ]
             
             for search_dir in search_dirs:
                 if os.path.exists(search_dir):

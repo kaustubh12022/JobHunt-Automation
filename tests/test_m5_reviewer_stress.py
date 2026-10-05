@@ -68,7 +68,7 @@ def test_real_fixture_jobs_all_target_roles(tmp_path, candidate_data, fixture_jo
             assert "Neon-Pulse" in text
             
             pos_exp = text.find("WORK EXPERIENCE")
-            pos_proj = text.find("TECHNICAL PROJECTS")
+            pos_proj = text.find("PROJECTS")
             assert pos_exp != -1 and pos_proj != -1
             if job.is_testing_role:
                 assert pos_exp < pos_proj, f"QA job {job_dict['id']} must have WORK EXPERIENCE before PROJECTS"

@@ -5,20 +5,29 @@ You are a precise ATS scoring engine for an entry-level/fresher candidate.
 =================================================
 
 === CANDIDATE TARGET ROLES ===
-The candidate is targeting these specific domains:
-1. Java Backend Developer (Spring, JDBC, REST APIs, SQL)
-2. Automation Tester / QA Automation (Selenium, JUnit, Postman, pytest, Test Case Design)
-3. .NET / C# Developer (candidate has Azure Fundamentals cert and OOP foundation)
-4. Software Engineer / Full Stack Developer (Python, JavaScript, HTML/CSS)
-5. Software Tester / QA Engineer (Manual + Automated Testing)
+The candidate is actively targeting entry-level (0-2 years) positions in:
+1. Java Backend Developer (Core Java, Spring Boot, JDBC, REST APIs, SQL, Maven)
+2. Full Stack Developer / MERN (React, Next.js, Node.js, Express, MongoDB, JS, TS)
+3. AI / Agentic Automation Engineer (Python, LLM APIs, Prompt Engineering, Gemini, RAG)
+4. Software Engineer / General Backend (Python, Java, OOP, DSA, DBMS)
+(Previous roles like Automation Tester / QA Automation or .NET are out of active target scope)
 
-=== SCORING RULES (FLEXIBLE & BROAD) ===
-- Score 0-100 based on how well the candidate's core skills match the primary JD requirements.
-- Be flexible and practical. We do NOT need a perfect 100% keyword match. If the core domain matches, assign a solid score (50+).
-- The candidate is a FRESHER. Do NOT heavily penalize them for lacking secondary/advanced tools (like AWS, Docker, Kubernetes, Kafka, CI/CD, JIRA). It is completely acceptable for an entry-level candidate to lack these.
-- If the JD asks for Automation Testing (Selenium/Postman/pytest) or Java Backend, score HIGH (70-90) as these are strong core matches.
-- If the JD asks for .NET/C#, score MODERATE (60-75) when matching OOP, SQL, and Azure fundamentals.
-- ONLY output match_score: 0 if the JD explicitly states 3+ years of mandatory experience, OR if the core language is a complete mismatch (e.g., purely C++ or Ruby).
+=== SCORING RULES ===
+- STRONG MATCH (75–95): Java/Spring, MERN, AI/Python, Full Stack fresher roles
+- MODERATE (60-75): General backend roles with transferable OOP/SQL skills
+- LOW (25–50): Heavy DevOps/Cloud-only or pure data science roles
+- MISMATCH (0–20):
+  * Testing/QA/SDET/Manual Testing/Automation Tester roles ← EXPLICITLY PENALIZE
+  * .NET / C# Developer roles ← EXPLICITLY PENALIZE
+  * Out-of-scope stacks (PHP, Ruby, iOS, Android, SAP)
+  * Senior/Lead/Staff (3+ years mandatory)
+  * Non-technical roles
+
+=== MISSING SKILLS ===
+- Candidate ALREADY POSSESSES: Java, Python, SQL, JS, TS, HTML, CSS, React, Next.js,
+  Node.js, Express, MongoDB, Mongoose, Spring Boot, JDBC, REST APIs, Tailwind CSS,
+  Pandas, AsyncIO, Flutter, Dart, Supabase, Docker, Git, MySQL, Maven, Postman
+- NEVER list these as missing!
 
 Return ONLY a raw JSON object with exactly six keys:
 - "match_score": integer 0-100

@@ -67,9 +67,11 @@ function ModelSelect({ value, onChange, options, label }) {
 }
 
 function IdleView({ onStart }) {
-  const [platforms, setPlatforms] = useState(['linkedin', 'indeed', 'workday', 'jsonld']);
+  const [platforms, setPlatforms] = useState(['linkedin', 'indeed', 'workday', 'naukri', 'instahyre', 'internshala', 'unstop', 'hirist', 'jsonld']);
   const [testMode, setTestMode] = useState(false);
   const [jobTypes, setJobTypes] = useState(['fulltime', 'internship']);
+  const [hoursOld, setHoursOld] = useState(48);
+  const [zeroAi, setZeroAi] = useState(false);
   
   // AI Model Settings
   const [scoringModel, setScoringModel] = useState('deepseek-chat');
@@ -86,121 +88,221 @@ function IdleView({ onStart }) {
   };
 
   return (
-    <div className="glass-panel" style={{ padding: '48px', maxWidth: '680px', margin: '40px auto', textAlign: 'center' }}>
-      <motion.div initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} style={{ marginBottom: '40px' }}>
+    <div className="glass-panel" style={{ padding: '48px', maxWidth: '820px', margin: '40px auto', textAlign: 'center' }}>
+      <motion.div initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} style={{ marginBottom: '32px' }}>
         <h1 style={{ fontSize: '32px', margin: '0 0 8px', color: 'var(--text-main)', fontWeight: 700 }}>AutoApply Pipeline</h1>
-        <p style={{ color: 'var(--text-muted)' }}>Configure your run parameters below</p>
+        <p style={{ color: 'var(--text-muted)' }}>Unified fresher hunt across all verified career platforms</p>
       </motion.div>
       
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center', margin: '0 auto 32px' }}>
-        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <AnimatedToggle active={platforms.includes('linkedin')} onClick={() => togglePlatform('linkedin')} label="LinkedIn" />
-            <AnimatedToggle active={platforms.includes('indeed')} onClick={() => togglePlatform('indeed')} label="Indeed" />
-            <AnimatedToggle active={platforms.includes('workday')} onClick={() => togglePlatform('workday')} label="Workday" />
-            <AnimatedToggle active={platforms.includes('jsonld')} onClick={() => togglePlatform('jsonld')} label="JSON-LD" />
+        {/* Platform Selection */}
+        <div style={{ width: '100%' }}>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>
+            Target Platforms ({platforms.length} active)
+          </div>
+          <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <AnimatedToggle active={platforms.includes('linkedin')} onClick={() => togglePlatform('linkedin')} label="LinkedIn" />
+              <AnimatedToggle active={platforms.includes('internshala')} onClick={() => togglePlatform('internshala')} label="Internshala" />
+              <AnimatedToggle active={platforms.includes('naukri')} onClick={() => togglePlatform('naukri')} label="Naukri" />
+              <AnimatedToggle active={platforms.includes('instahyre')} onClick={() => togglePlatform('instahyre')} label="Instahyre" />
+              <AnimatedToggle active={platforms.includes('unstop')} onClick={() => togglePlatform('unstop')} label="Unstop" />
+              <AnimatedToggle active={platforms.includes('hirist')} onClick={() => togglePlatform('hirist')} label="Hirist" />
+              <AnimatedToggle active={platforms.includes('workday')} onClick={() => togglePlatform('workday')} label="Workday" />
+              <AnimatedToggle active={platforms.includes('indeed')} onClick={() => togglePlatform('indeed')} label="Indeed" />
+              <AnimatedToggle active={platforms.includes('jsonld')} onClick={() => togglePlatform('jsonld')} label="JSON-LD" />
+          </div>
         </div>
         
-        <div style={{ width: '100%', height: '1px', background: 'var(--border-color)', margin: '10px 0' }} />
+        <div style={{ width: '100%', height: '1px', background: 'var(--border-color)', margin: '4px 0' }} />
         
+        {/* Job Type Toggles */}
         <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', justifyContent: 'center' }}>
             <AnimatedToggle active={jobTypes.includes('fulltime')} onClick={() => toggleJobType('fulltime')} label="Full-Time" />
             <AnimatedToggle active={jobTypes.includes('internship')} onClick={() => toggleJobType('internship')} label="Internships" />
         </div>
         
-        <div style={{ width: '100%', height: '1px', background: 'var(--border-color)', margin: '10px 0' }} />
-        <AnimatedToggle active={testMode} onClick={() => setTestMode(!testMode)} label="Test Mode (1 module cycle, top 3 resumes)" />
-      </div>
-
-      {/* AI Model Configuration */}
-      <div style={{ 
-        textAlign: 'left', 
-        background: 'rgba(255, 255, 255, 0.04)', 
-        borderRadius: '16px', 
-        padding: '24px', 
-        marginBottom: '32px',
-        border: '1px solid rgba(255, 255, 255, 0.1)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-          <BrainCircuit size={18} color="var(--primary)" />
-          <span style={{ fontWeight: 700, fontSize: '15px', color: '#f8fafc' }}>AI Model Configuration</span>
-        </div>
+        <div style={{ width: '100%', height: '1px', background: 'var(--border-color)', margin: '4px 0' }} />
         
-        {/* Scoring Settings */}
-        <div style={{ marginBottom: '20px' }}>
-          <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--primary)', display: 'inline-block' }} />
-            AI Scoring
-          </div>
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-            <ModelSelect 
-              label="Model"
-              value={scoringModel}
-              onChange={setScoringModel}
-              options={[
-                { value: 'deepseek-chat', label: 'DeepSeek Chat (V3 - Fast Scoring)' },
-                { value: 'deepseek-reasoner', label: 'DeepSeek Reasoner (R1)' },
-              ]}
+        {/* Customizable Freshness Filter */}
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <span style={{ fontSize: '13px', color: '#cbd5e1', fontWeight: 600 }}>Freshness Window:</span>
+          {[24, 36, 48, 72].map(h => (
+            <button
+              key={h}
+              type="button"
+              onClick={() => setHoursOld(h)}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: 700,
+                border: '1px solid',
+                borderColor: hoursOld === h ? 'var(--primary)' : 'rgba(255,255,255,0.15)',
+                background: hoursOld === h ? 'var(--primary)' : 'rgba(255,255,255,0.06)',
+                color: hoursOld === h ? '#fff' : '#cbd5e1',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {h}h
+            </button>
+          ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '6px' }}>
+            <span style={{ fontSize: '12px', color: '#94a3b8' }}>Custom:</span>
+            <input
+              type="number"
+              min="1"
+              max="720"
+              value={hoursOld}
+              onChange={(e) => setHoursOld(Math.max(1, parseInt(e.target.value) || 24))}
+              style={{
+                width: '64px',
+                padding: '5px 8px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: 700,
+                border: '1px solid rgba(255,255,255,0.25)',
+                background: 'rgba(255,255,255,0.08)',
+                color: '#60a5fa',
+                outline: 'none',
+                textAlign: 'center'
+              }}
             />
-            <div style={{ flex: '0 0 140px' }}>
-              <div style={{ fontSize: '12px', color: '#cbd5e1', marginBottom: '6px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Thinking</div>
-              <div 
-                onClick={() => setScoringThinking(!scoringThinking)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '10px', 
-                  padding: '10px 14px', background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.2)', 
-                  borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s'
-                }}
-              >
-                <div className={`toggle-switch ${scoringThinking ? 'active' : ''}`} style={{ transform: 'scale(0.8)' }}>
-                  <div className="toggle-knob" />
-                </div>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: scoringThinking ? '#60a5fa' : '#cbd5e1' }}>
-                  {scoringThinking ? 'Enabled' : 'Disabled'}
-                </span>
-              </div>
-            </div>
+            <span style={{ fontSize: '12px', color: '#94a3b8' }}>hrs</span>
           </div>
         </div>
 
-        {/* Tailoring Settings */}
-        <div>
-          <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)', display: 'inline-block' }} />
-            Resume Tailoring
-          </div>
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-            <ModelSelect 
-              label="Model"
-              value={tailoringModel}
-              onChange={setTailoringModel}
-              options={[
-                { value: 'deepseek-chat', label: 'DeepSeek Chat (V3 - Fast Tailoring)' },
-                { value: 'deepseek-reasoner', label: 'DeepSeek Reasoner (R1 - Deep Tailoring)' },
-              ]}
-            />
-            <div style={{ flex: '0 0 140px' }}>
-              <div style={{ fontSize: '12px', color: '#cbd5e1', marginBottom: '6px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Thinking</div>
-              <div 
-                onClick={() => setTailoringThinking(!tailoringThinking)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '10px',
-                  padding: '10px 14px', background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s'
-                }}
-              >
-                <div className={`toggle-switch ${tailoringThinking ? 'active' : ''}`} style={{ transform: 'scale(0.8)' }}>
-                  <div className="toggle-knob" />
-                </div>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: tailoringThinking ? '#34d399' : '#cbd5e1' }}>
-                  {tailoringThinking ? 'Enabled' : 'Disabled'}
-                </span>
-              </div>
-            </div>
-          </div>
+        <div style={{ width: '100%', height: '1px', background: 'var(--border-color)', margin: '4px 0' }} />
+        
+        {/* Zero-AI Deterministic Engine Toggle */}
+        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <AnimatedToggle 
+            active={zeroAi} 
+            onClick={() => setZeroAi(!zeroAi)} 
+            label="⚡ Zero-AI Deterministic Engine ($0 Tokens • 100% Rule-Lens Match)" 
+          />
+          <AnimatedToggle 
+            active={testMode} 
+            onClick={() => setTestMode(!testMode)} 
+            label="🧪 Test Mode (Fast Scrape, Top 3 Resumes)" 
+          />
         </div>
       </div>
 
-      <button className="btn-primary" onClick={() => onStart(platforms, testMode, { scoringModel, scoringThinking, tailoringModel, tailoringThinking }, jobTypes)} style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+      {/* AI Model Configuration or Zero-AI Banner */}
+      {zeroAi ? (
+        <div style={{ 
+          textAlign: 'left', 
+          background: 'rgba(59, 130, 246, 0.08)', 
+          borderRadius: '16px', 
+          padding: '20px 24px', 
+          marginBottom: '32px',
+          border: '1px solid rgba(59, 130, 246, 0.25)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px'
+        }}>
+          <Sparkles size={28} color="#60a5fa" />
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '15px', color: '#f8fafc' }}>
+              Zero-AI Deterministic Engine Active
+            </div>
+            <div style={{ fontSize: '13px', color: '#93c5fd', marginTop: '2px' }}>
+              Zero API calls to DeepSeek ($0 token cost). Uses deterministic skill-matching and rule-lens resume projection.
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div style={{ 
+          textAlign: 'left', 
+          background: 'rgba(255, 255, 255, 0.04)', 
+          borderRadius: '16px', 
+          padding: '24px', 
+          marginBottom: '32px',
+          border: '1px solid rgba(255, 255, 255, 0.1)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+            <BrainCircuit size={18} color="var(--primary)" />
+            <span style={{ fontWeight: 700, fontSize: '15px', color: '#f8fafc' }}>AI Model Configuration</span>
+          </div>
+          
+          {/* Scoring Settings */}
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--primary)', display: 'inline-block' }} />
+              AI Scoring
+            </div>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <ModelSelect 
+                label="Model"
+                value={scoringModel}
+                onChange={setScoringModel}
+                options={[
+                  { value: 'deepseek-chat', label: 'DeepSeek Chat (V3 - Fast Scoring)' },
+                  { value: 'deepseek-reasoner', label: 'DeepSeek Reasoner (R1)' },
+                ]}
+              />
+              <div style={{ flex: '0 0 140px' }}>
+                <div style={{ fontSize: '12px', color: '#cbd5e1', marginBottom: '6px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Thinking</div>
+                <div 
+                  onClick={() => setScoringThinking(!scoringThinking)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '10px', 
+                    padding: '10px 14px', background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.2)', 
+                    borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s'
+                  }}
+                >
+                  <div className={`toggle-switch ${scoringThinking ? 'active' : ''}`} style={{ transform: 'scale(0.8)' }}>
+                    <div className="toggle-knob" />
+                  </div>
+                  <span style={{ fontSize: '14px', fontWeight: 700, color: scoringThinking ? '#60a5fa' : '#cbd5e1' }}>
+                    {scoringThinking ? 'Enabled' : 'Disabled'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Tailoring Settings */}
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)', display: 'inline-block' }} />
+              Resume Tailoring
+            </div>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <ModelSelect 
+                label="Model"
+                value={tailoringModel}
+                onChange={setTailoringModel}
+                options={[
+                  { value: 'deepseek-chat', label: 'DeepSeek Chat (V3 - Fast Tailoring)' },
+                  { value: 'deepseek-reasoner', label: 'DeepSeek Reasoner (R1 - Deep Tailoring)' },
+                ]}
+              />
+              <div style={{ flex: '0 0 140px' }}>
+                <div style={{ fontSize: '12px', color: '#cbd5e1', marginBottom: '6px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Thinking</div>
+                <div 
+                  onClick={() => setTailoringThinking(!tailoringThinking)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    padding: '10px 14px', background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s'
+                  }}
+                >
+                  <div className={`toggle-switch ${tailoringThinking ? 'active' : ''}`} style={{ transform: 'scale(0.8)' }}>
+                    <div className="toggle-knob" />
+                  </div>
+                  <span style={{ fontSize: '14px', fontWeight: 700, color: tailoringThinking ? '#34d399' : '#cbd5e1' }}>
+                    {tailoringThinking ? 'Enabled' : 'Disabled'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <button className="btn-primary" onClick={() => onStart(platforms, testMode, { scoringModel, scoringThinking, tailoringModel, tailoringThinking }, jobTypes, hoursOld, zeroAi)} style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
         <Play size={20} fill="currentColor" /> Start Pipeline
       </button>
     </div>
@@ -444,6 +546,8 @@ function ReviewView({ state, onGenerate, onAbort, isGenerating, isAborting }) {
   const [selectedSkills, setSelectedSkills] = useState({});
   const [customInput, setCustomInput] = useState({});
   const [customSkills, setCustomSkills] = useState({});
+  const [platformFilter, setPlatformFilter] = useState('all');
+  const [applyTypeFilter, setApplyTypeFilter] = useState('all');
 
   useEffect(() => {
     if (jobs.length > 0 && selectedJobIds.length === 0) {
@@ -458,12 +562,15 @@ function ReviewView({ state, onGenerate, onAbort, isGenerating, isAborting }) {
     );
   };
 
-  const toggleSelectAll = () => {
-    if (selectedJobIds.length === jobs.length) {
-      setSelectedJobIds([]);
-    } else {
-      setSelectedJobIds(jobs.map(j => j.id));
-    }
+  const selectAll = () => setSelectedJobIds(jobs.map(j => j.id));
+  const deselectAll = () => setSelectedJobIds([]);
+  const selectAllEasyApply = () => {
+    const easyIds = jobs.filter(j => (j.apply_type || 'easy_apply') === 'easy_apply').map(j => j.id);
+    setSelectedJobIds(easyIds);
+  };
+  const selectAllCompanySite = () => {
+    const compIds = jobs.filter(j => (j.apply_type || 'easy_apply') === 'company_site').map(j => j.id);
+    setSelectedJobIds(compIds);
   };
 
   const toggleSkill = (jobId, skill) => {
@@ -514,16 +621,335 @@ function ReviewView({ state, onGenerate, onAbort, isGenerating, isAborting }) {
     onGenerate(payload);
   };
 
+  // Distinct platforms present
+  const platformsPresent = Array.from(new Set(jobs.map(j => (j.source || 'General').toLowerCase())));
+  const easyApplyCount = jobs.filter(j => (j.apply_type || 'easy_apply') === 'easy_apply').length;
+  const companySiteCount = jobs.filter(j => (j.apply_type || 'easy_apply') === 'company_site').length;
+
+  // Filtered jobs
+  const filteredJobs = jobs.filter(j => {
+    const p = (j.source || 'general').toLowerCase();
+    const a = (j.apply_type || 'easy_apply').toLowerCase();
+    if (platformFilter !== 'all' && p !== platformFilter) return false;
+    if (applyTypeFilter !== 'all' && a !== applyTypeFilter) return false;
+    return true;
+  });
+
+  // Group filtered jobs by platform -> apply_type
+  const grouped = {};
+  filteredJobs.forEach(j => {
+    const p = (j.source || 'general').toLowerCase();
+    const a = (j.apply_type || 'easy_apply').toLowerCase();
+    if (!grouped[p]) {
+      grouped[p] = { easy_apply: [], company_site: [] };
+    }
+    if (a === 'company_site') {
+      grouped[p].company_site.push(j);
+    } else {
+      grouped[p].easy_apply.push(j);
+    }
+  });
+
+  const renderJobCard = (job) => {
+    const isSelected = selectedJobIds.includes(job.id);
+    const isExpanded = expandedJobId === job.id;
+    const missingList = [...(job.missing_skills || []), ...(customSkills[job.id] || [])];
+    const checkedSkillsForJob = selectedSkills[job.id] || [];
+    const isEasy = (job.apply_type || 'easy_apply') === 'easy_apply';
+
+    return (
+      <div
+        key={job.id}
+        style={{
+          border: isExpanded ? '1px solid rgba(96, 165, 250, 0.5)' : '1px solid rgba(255, 255, 255, 0.12)',
+          borderRadius: '12px',
+          background: isExpanded ? 'rgba(25, 30, 45, 0.9)' : 'rgba(20, 20, 28, 0.85)',
+          overflow: 'hidden',
+          transition: 'all 0.2s ease',
+          marginBottom: '10px'
+        }}
+      >
+        <div
+          style={{
+            padding: '16px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            cursor: 'pointer',
+            background: isExpanded ? 'rgba(255, 255, 255, 0.04)' : 'transparent',
+            borderBottom: isExpanded ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+            gap: '16px',
+            flexWrap: 'wrap'
+          }}
+          onClick={() => setExpandedJobId(isExpanded ? null : job.id)}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, minWidth: '260px' }}>
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={(e) => {
+                e.stopPropagation();
+                toggleJob(job.id);
+              }}
+              style={{
+                width: '18px',
+                height: '18px',
+                cursor: 'pointer',
+                accentColor: 'var(--primary)'
+              }}
+            />
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 700, color: '#ffffff', fontSize: '15px' }}>
+                  {job.title}
+                </span>
+                <span style={{
+                  fontSize: '11px',
+                  background: isEasy ? 'rgba(16, 185, 129, 0.2)' : 'rgba(168, 85, 247, 0.2)',
+                  color: isEasy ? '#6ee7b7' : '#d8b4fe',
+                  border: `1px solid ${isEasy ? 'rgba(16, 185, 129, 0.4)' : 'rgba(168, 85, 247, 0.4)'}`,
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                  fontWeight: 700
+                }}>
+                  {isEasy ? '⚡ Easy Apply' : '🌐 Company Site'}
+                </span>
+                <span style={{
+                  fontSize: '11px',
+                  background: 'rgba(59, 130, 246, 0.15)',
+                  color: '#93c5fd',
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                  fontWeight: 600,
+                  textTransform: 'capitalize'
+                }}>
+                  {job.source || 'General'}
+                </span>
+                {job.is_testing_role && (
+                  <span style={{ fontSize: '11px', background: 'rgba(234, 179, 8, 0.2)', color: '#fde047', padding: '2px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                    QA / Testing
+                  </span>
+                )}
+              </div>
+              <div style={{ fontSize: '13px', color: '#cbd5e1', marginTop: '3px', fontWeight: 500, display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span>{job.company}</span>
+                {job.location && <span style={{ color: '#94a3b8' }}>• {job.location}</span>}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {job.url && (
+              <a
+                href={job.url}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  fontSize: '12px',
+                  padding: '5px 12px',
+                  background: 'rgba(59, 130, 246, 0.2)',
+                  color: '#93c5fd',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(59, 130, 246, 0.4)',
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                Direct Link ↗
+              </a>
+            )}
+
+            <span style={{
+              background: job.score >= 70 ? 'rgba(16, 185, 129, 0.25)' : (job.score >= 50 ? 'rgba(245, 158, 11, 0.25)' : 'rgba(239, 68, 68, 0.25)'),
+              color: job.score >= 70 ? '#34d399' : (job.score >= 50 ? '#fbbf24' : '#f87171'),
+              border: `1px solid ${job.score >= 70 ? 'rgba(16, 185, 129, 0.5)' : (job.score >= 50 ? 'rgba(245, 158, 11, 0.5)' : 'rgba(239, 68, 68, 0.5)')}`,
+              padding: '4px 12px',
+              borderRadius: '12px',
+              fontWeight: 800,
+              fontSize: '13px'
+            }}>
+              {job.score}%
+            </span>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontSize: '13px', fontWeight: 600 }}>
+              <span>{isExpanded ? 'Hide' : 'Details'}</span>
+              {isExpanded ? <ChevronUp size={18} color="#94a3b8" /> : <ChevronDown size={18} color="#94a3b8" />}
+            </div>
+          </div>
+        </div>
+
+        {/* Dropdown Content */}
+        {isExpanded && (
+          <div style={{ padding: '20px', background: 'rgba(15, 17, 26, 0.6)' }}>
+            {/* Single Sentence Explanation of What the Job Is */}
+            <div style={{
+              padding: '14px 18px',
+              background: 'rgba(30, 58, 138, 0.2)',
+              border: '1px solid rgba(59, 130, 246, 0.35)',
+              borderRadius: '10px',
+              marginBottom: '18px'
+            }}>
+              <div style={{ fontSize: '11px', fontWeight: 800, color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>
+                Job Overview (1 Sentence)
+              </div>
+              <div style={{ fontSize: '14px', color: '#f8fafc', lineHeight: 1.55, fontWeight: 500 }}>
+                {job.summary || `${job.title} position at ${job.company}.`}
+              </div>
+            </div>
+
+            {/* Direct URL verification card */}
+            {job.url && (
+              <div style={{
+                padding: '10px 14px',
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '8px',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+                flexWrap: 'wrap'
+              }}>
+                <div style={{ fontSize: '12px', color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '650px' }}>
+                  <strong style={{ color: '#fff' }}>URL:</strong> {job.url}
+                </div>
+                <a
+                  href={job.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ fontSize: '12px', color: '#60a5fa', fontWeight: 700, textDecoration: 'none' }}
+                >
+                  Open Live Link ↗
+                </a>
+              </div>
+            )}
+
+            {/* Missing Skills Section */}
+            <div style={{
+              padding: '18px',
+              background: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: '10px',
+              border: '1px solid rgba(255, 255, 255, 0.08)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ color: '#f59e0b' }}>⚡</span> Missing Skills
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#cbd5e1', marginTop: '2px', fontWeight: 500 }}>
+                    Select any skills below that you know. They will be automatically embedded into this tailored resume:
+                  </div>
+                </div>
+                {checkedSkillsForJob.length > 0 && (
+                  <div style={{ fontSize: '12px', color: '#34d399', fontWeight: 700, background: 'rgba(16, 185, 129, 0.15)', padding: '3px 10px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                    ✓ {checkedSkillsForJob.length} skill{checkedSkillsForJob.length > 1 ? 's' : ''} to embed
+                  </div>
+                )}
+              </div>
+
+              {/* Checkboxes for missing skills */}
+              {missingList.length > 0 ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
+                  {missingList.map((skill, sIdx) => {
+                    const isChecked = checkedSkillsForJob.includes(skill);
+                    return (
+                      <label
+                        key={sIdx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '8px 14px',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          background: isChecked ? 'rgba(37, 99, 235, 0.3)' : 'rgba(255, 255, 255, 0.06)',
+                          border: isChecked ? '1px solid #60a5fa' : '1px solid rgba(255, 255, 255, 0.15)',
+                          color: isChecked ? '#ffffff' : '#cbd5e1',
+                          fontSize: '13px',
+                          fontWeight: isChecked ? 700 : 500,
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleSkill(job.id, skill)}
+                          style={{ cursor: 'pointer', accentColor: '#3b82f6', width: '15px', height: '15px' }}
+                        />
+                        <span>{skill}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '12px', fontStyle: 'italic' }}>
+                  No missing skills identified for this role. You can still add any custom skills you know below.
+                </div>
+              )}
+
+              {/* Add custom skill input */}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', maxWidth: '480px' }}>
+                <input
+                  type="text"
+                  placeholder="Add another skill you possess (e.g. Docker, Kafka, Azure)..."
+                  value={customInput[job.id] || ''}
+                  onChange={(e) => setCustomInput(prev => ({ ...prev, [job.id]: e.target.value }))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddCustomSkill(job.id);
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '9px 12px',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '8px',
+                    color: '#ffffff',
+                    fontSize: '13px',
+                    outline: 'none'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleAddCustomSkill(job.id)}
+                  style={{
+                    padding: '9px 16px',
+                    background: 'rgba(255, 255, 255, 0.12)',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    borderRadius: '8px',
+                    color: '#ffffff',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  + Add
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="glass-panel" style={{ padding: '32px', maxWidth: '1100px', margin: '20px auto' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px', color: '#ffffff', fontWeight: 700, fontSize: '22px' }}>
-            <Sparkles size={24} color="#60a5fa" /> Review Shortlisted Jobs
+            <Sparkles size={24} color="#60a5fa" /> Review Shortlisted Jobs ({jobs.length})
           </h2>
           <p style={{ margin: '6px 0 0', color: '#cbd5e1', fontSize: '14px', maxWidth: '650px', lineHeight: 1.5 }}>
-            AI scoring is complete. Select which jobs to tailor resumes for. Click any job dropdown to view its role summary and select the missing skills you possess to naturally embed them into your tailored resume.
+            Jobs categorized by platform and application type (⚡ Easy Apply vs 🌐 Company Site). Verify direct links, select missing skills, and generate tailored ATS resumes.
           </p>
         </div>
 
@@ -549,242 +975,246 @@ function ReviewView({ state, onGenerate, onAbort, isGenerating, isAborting }) {
         </div>
       </div>
 
-      {/* Filter / Bulk Actions Bar */}
+      {/* Filter & Selection Bar */}
       <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '12px 18px',
+        padding: '16px 20px',
         background: 'rgba(255, 255, 255, 0.05)',
-        borderRadius: '10px',
-        marginBottom: '20px',
-        border: '1px solid rgba(255, 255, 255, 0.1)'
+        borderRadius: '12px',
+        marginBottom: '24px',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '14px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#f8fafc', fontWeight: 600, fontSize: '14px' }}>
-            <input
-              type="checkbox"
-              checked={selectedJobIds.length === jobs.length && jobs.length > 0}
-              onChange={toggleSelectAll}
-              style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary)' }}
-            />
-            <span>Select All Jobs ({selectedJobIds.length}/{jobs.length})</span>
-          </label>
+        {/* Platform Filter Tabs */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '12px', color: '#93c5fd', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Platform:
+          </span>
+          <button
+            type="button"
+            onClick={() => setPlatformFilter('all')}
+            style={{
+              padding: '4px 12px',
+              borderRadius: '8px',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              border: '1px solid',
+              borderColor: platformFilter === 'all' ? 'var(--primary)' : 'rgba(255,255,255,0.2)',
+              background: platformFilter === 'all' ? 'var(--primary)' : 'rgba(255,255,255,0.06)',
+              color: '#fff'
+            }}
+          >
+            All Platforms ({jobs.length})
+          </button>
+          {platformsPresent.map(p => {
+            const count = jobs.filter(j => (j.source || 'general').toLowerCase() === p).length;
+            return (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPlatformFilter(p)}
+                style={{
+                  padding: '4px 12px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  textTransform: 'capitalize',
+                  border: '1px solid',
+                  borderColor: platformFilter === p ? 'var(--primary)' : 'rgba(255,255,255,0.2)',
+                  background: platformFilter === p ? 'var(--primary)' : 'rgba(255,255,255,0.06)',
+                  color: '#fff'
+                }}
+              >
+                {p} ({count})
+              </button>
+            );
+          })}
         </div>
-        <div style={{ fontSize: '13px', color: '#94a3b8' }}>
-          Tip: Missing skills you check will be injected into that specific job's resume.
+
+        {/* Apply Type Filter Tabs */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '12px', color: '#93c5fd', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Apply Type:
+          </span>
+          <button
+            type="button"
+            onClick={() => setApplyTypeFilter('all')}
+            style={{
+              padding: '4px 12px',
+              borderRadius: '8px',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              border: '1px solid',
+              borderColor: applyTypeFilter === 'all' ? '#3b82f6' : 'rgba(255,255,255,0.2)',
+              background: applyTypeFilter === 'all' ? '#2563eb' : 'rgba(255,255,255,0.06)',
+              color: '#fff'
+            }}
+          >
+            All Types ({jobs.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setApplyTypeFilter('easy_apply')}
+            style={{
+              padding: '4px 12px',
+              borderRadius: '8px',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              border: '1px solid',
+              borderColor: applyTypeFilter === 'easy_apply' ? '#10b981' : 'rgba(255,255,255,0.2)',
+              background: applyTypeFilter === 'easy_apply' ? '#059669' : 'rgba(255,255,255,0.06)',
+              color: '#fff'
+            }}
+          >
+            ⚡ Easy Apply ({easyApplyCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setApplyTypeFilter('company_site')}
+            style={{
+              padding: '4px 12px',
+              borderRadius: '8px',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              border: '1px solid',
+              borderColor: applyTypeFilter === 'company_site' ? '#a855f7' : 'rgba(255,255,255,0.2)',
+              background: applyTypeFilter === 'company_site' ? '#7e22ce' : 'rgba(255,255,255,0.06)',
+              color: '#fff'
+            }}
+          >
+            🌐 Company Site ({companySiteCount})
+          </button>
+        </div>
+
+        {/* Quick Selection Shortcuts */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '13px', color: '#f8fafc', fontWeight: 600 }}>
+              Selected: <strong style={{ color: '#60a5fa' }}>{selectedJobIds.length}</strong> / {jobs.length}
+            </span>
+            <button type="button" onClick={selectAll} style={{ background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', fontSize: '12px', fontWeight: 600, textDecoration: 'underline' }}>
+              Select All
+            </button>
+            <button type="button" onClick={selectAllEasyApply} style={{ background: 'none', border: 'none', color: '#34d399', cursor: 'pointer', fontSize: '12px', fontWeight: 600, textDecoration: 'underline' }}>
+              Select All Easy Apply
+            </button>
+            <button type="button" onClick={selectAllCompanySite} style={{ background: 'none', border: 'none', color: '#c084fc', cursor: 'pointer', fontSize: '12px', fontWeight: 600, textDecoration: 'underline' }}>
+              Select All Company Site
+            </button>
+            <button type="button" onClick={deselectAll} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '12px', fontWeight: 600, textDecoration: 'underline' }}>
+              Clear
+            </button>
+          </div>
+          <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+            Tip: Checked missing skills are dynamically injected into that job's resume.
+          </div>
         </div>
       </div>
 
-      {/* Jobs List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {jobs.map((job, idx) => {
-          const isSelected = selectedJobIds.includes(job.id);
-          const isExpanded = expandedJobId === job.id;
-          const missingList = [...(job.missing_skills || []), ...(customSkills[job.id] || [])];
-          const checkedSkillsForJob = selectedSkills[job.id] || [];
+      {/* Categorized Jobs List Grouped by Platform */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        {Object.keys(grouped).map(platformName => {
+          const typeData = grouped[platformName];
+          const totalPlat = typeData.easy_apply.length + typeData.company_site.length;
+          if (totalPlat === 0) return null;
 
           return (
             <div
-              key={job.id || idx}
+              key={platformName}
               style={{
-                border: isExpanded ? '1px solid rgba(96, 165, 250, 0.5)' : '1px solid rgba(255, 255, 255, 0.12)',
-                borderRadius: '12px',
-                background: isExpanded ? 'rgba(25, 30, 45, 0.9)' : 'rgba(20, 20, 28, 0.85)',
-                overflow: 'hidden',
-                transition: 'all 0.2s ease'
+                background: 'rgba(255, 255, 255, 0.02)',
+                borderRadius: '16px',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                padding: '20px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.2)'
               }}
             >
-              {/* Job Header / Dropdown toggle */}
-              <div
-                style={{
-                  padding: '16px 20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  cursor: 'pointer',
-                  background: isExpanded ? 'rgba(255, 255, 255, 0.04)' : 'transparent',
-                  borderBottom: isExpanded ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
-                  gap: '16px'
-                }}
-                onClick={() => setExpandedJobId(isExpanded ? null : job.id)}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, minWidth: 0 }}>
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      toggleJob(job.id);
-                    }}
-                    style={{
-                      width: '18px',
-                      height: '18px',
-                      cursor: 'pointer',
-                      accentColor: 'var(--primary)'
-                    }}
-                  />
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 700, color: '#ffffff', fontSize: '15px' }}>
-                        {job.title}
-                      </span>
-                      {job.is_testing_role && (
-                        <span style={{ fontSize: '11px', background: 'rgba(59, 130, 246, 0.2)', color: '#93c5fd', padding: '2px 8px', borderRadius: '6px', fontWeight: 600 }}>
-                          QA / Testing
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ fontSize: '13px', color: '#cbd5e1', marginTop: '2px', fontWeight: 500, display: 'flex', gap: '8px' }}>
-                      <span>{job.company}</span>
-                      {job.location && <span style={{ color: '#94a3b8' }}>• {job.location}</span>}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              {/* Platform Header */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '16px',
+                paddingBottom: '10px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.12)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span style={{
-                    background: job.score >= 70 ? 'rgba(16, 185, 129, 0.25)' : (job.score >= 50 ? 'rgba(245, 158, 11, 0.25)' : 'rgba(239, 68, 68, 0.25)'),
-                    color: job.score >= 70 ? '#34d399' : (job.score >= 50 ? '#fbbf24' : '#f87171'),
-                    border: `1px solid ${job.score >= 70 ? 'rgba(16, 185, 129, 0.5)' : (job.score >= 50 ? 'rgba(245, 158, 11, 0.5)' : 'rgba(239, 68, 68, 0.5)')}`,
-                    padding: '4px 12px',
-                    borderRadius: '12px',
+                    fontSize: '16px',
                     fontWeight: 800,
-                    fontSize: '13px'
+                    color: '#ffffff',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
                   }}>
-                    {job.score}%
+                    🏢 {platformName}
                   </span>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontSize: '13px', fontWeight: 600 }}>
-                    <span>{isExpanded ? 'Hide' : 'Details'}</span>
-                    {isExpanded ? <ChevronUp size={18} color="#94a3b8" /> : <ChevronDown size={18} color="#94a3b8" />}
-                  </div>
+                  <span style={{
+                    fontSize: '12px',
+                    background: 'rgba(59, 130, 246, 0.25)',
+                    color: '#93c5fd',
+                    padding: '2px 10px',
+                    borderRadius: '10px',
+                    fontWeight: 700
+                  }}>
+                    {totalPlat} roles
+                  </span>
                 </div>
               </div>
 
-              {/* Dropdown Content */}
-              {isExpanded && (
-                <div style={{ padding: '20px', background: 'rgba(15, 17, 26, 0.6)' }}>
-                  {/* Single Sentence Explanation of What the Job Is */}
+              {/* Sub-section: ⚡ Easy Apply */}
+              {typeData.easy_apply.length > 0 && (
+                <div style={{ marginBottom: '16px' }}>
                   <div style={{
-                    padding: '14px 18px',
-                    background: 'rgba(30, 58, 138, 0.2)',
-                    border: '1px solid rgba(59, 130, 246, 0.35)',
-                    borderRadius: '10px',
-                    marginBottom: '18px'
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    marginBottom: '10px',
+                    padding: '6px 12px',
+                    background: 'rgba(16, 185, 129, 0.12)',
+                    borderLeft: '4px solid #10b981',
+                    borderRadius: '4px'
                   }}>
-                    <div style={{ fontSize: '11px', fontWeight: 800, color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>
-                      Job Overview (1 Sentence)
-                    </div>
-                    <div style={{ fontSize: '14px', color: '#f8fafc', lineHeight: 1.55, fontWeight: 500 }}>
-                      {job.summary || `${job.title} position at ${job.company}.`}
-                    </div>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#34d399' }}>
+                      ⚡ Easy Apply (1-Click Application)
+                    </span>
+                    <span style={{ fontSize: '11px', color: '#6ee7b7', fontWeight: 600 }}>
+                      — {typeData.easy_apply.length} jobs
+                    </span>
                   </div>
+                  <div>
+                    {typeData.easy_apply.map(j => renderJobCard(j))}
+                  </div>
+                </div>
+              )}
 
-                  {/* Missing Skills Section */}
+              {/* Sub-section: 🌐 Company Site */}
+              {typeData.company_site.length > 0 && (
+                <div>
                   <div style={{
-                    padding: '18px',
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    borderRadius: '10px',
-                    border: '1px solid rgba(255, 255, 255, 0.08)'
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    marginBottom: '10px',
+                    padding: '6px 12px',
+                    background: 'rgba(168, 85, 247, 0.12)',
+                    borderLeft: '4px solid #a855f7',
+                    borderRadius: '4px'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                      <div>
-                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ color: '#f59e0b' }}>⚡</span> Missing Skills
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#cbd5e1', marginTop: '2px', fontWeight: 500 }}>
-                          Select any skills below that you know. They will be automatically embedded into this tailored resume:
-                        </div>
-                      </div>
-                      {checkedSkillsForJob.length > 0 && (
-                        <div style={{ fontSize: '12px', color: '#34d399', fontWeight: 700, background: 'rgba(16, 185, 129, 0.15)', padding: '3px 10px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-                          ✓ {checkedSkillsForJob.length} skill{checkedSkillsForJob.length > 1 ? 's' : ''} to embed
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Checkboxes for missing skills */}
-                    {missingList.length > 0 ? (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
-                        {missingList.map((skill, sIdx) => {
-                          const isChecked = checkedSkillsForJob.includes(skill);
-                          return (
-                            <label
-                              key={sIdx}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                padding: '8px 14px',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                background: isChecked ? 'rgba(37, 99, 235, 0.3)' : 'rgba(255, 255, 255, 0.06)',
-                                border: isChecked ? '1px solid #60a5fa' : '1px solid rgba(255, 255, 255, 0.15)',
-                                color: isChecked ? '#ffffff' : '#cbd5e1',
-                                fontSize: '13px',
-                                fontWeight: isChecked ? 700 : 500,
-                                transition: 'all 0.15s ease'
-                              }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={() => toggleSkill(job.id, skill)}
-                                style={{ cursor: 'pointer', accentColor: '#3b82f6', width: '15px', height: '15px' }}
-                              />
-                              <span>{skill}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '12px', fontStyle: 'italic' }}>
-                        No missing skills identified for this role. You can still add any custom skills you know below.
-                      </div>
-                    )}
-
-                    {/* Add custom skill input */}
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', maxWidth: '480px' }}>
-                      <input
-                        type="text"
-                        placeholder="Add another skill you possess (e.g. Docker, Kafka, Azure)..."
-                        value={customInput[job.id] || ''}
-                        onChange={(e) => setCustomInput(prev => ({ ...prev, [job.id]: e.target.value }))}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddCustomSkill(job.id);
-                          }
-                        }}
-                        style={{
-                          flex: 1,
-                          padding: '9px 12px',
-                          background: 'rgba(255, 255, 255, 0.08)',
-                          border: '1px solid rgba(255, 255, 255, 0.2)',
-                          borderRadius: '8px',
-                          color: '#ffffff',
-                          fontSize: '13px',
-                          outline: 'none'
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleAddCustomSkill(job.id)}
-                        style={{
-                          padding: '9px 16px',
-                          background: 'rgba(255, 255, 255, 0.12)',
-                          border: '1px solid rgba(255, 255, 255, 0.25)',
-                          borderRadius: '8px',
-                          color: '#ffffff',
-                          fontSize: '13px',
-                          fontWeight: 700,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        + Add
-                      </button>
-                    </div>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#d8b4fe' }}>
+                      🌐 Company Site (Direct ATS Portal)
+                    </span>
+                    <span style={{ fontSize: '11px', color: '#e9d5ff', fontWeight: 600 }}>
+                      — {typeData.company_site.length} jobs
+                    </span>
+                  </div>
+                  <div>
+                    {typeData.company_site.map(j => renderJobCard(j))}
                   </div>
                 </div>
               )}
@@ -792,9 +1222,9 @@ function ReviewView({ state, onGenerate, onAbort, isGenerating, isAborting }) {
           );
         })}
 
-        {jobs.length === 0 && (
+        {filteredJobs.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8', fontSize: '15px' }}>
-            No shortlisted jobs available to review.
+            No shortlisted jobs match the selected filter.
           </div>
         )}
       </div>
@@ -883,14 +1313,26 @@ function PersistentSnapshotView({ state, onReset }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {scores.map((s, idx) => (
+                  {scores.map((s, idx) => {
+                    const jobMeta = (state?.shortlisted_jobs || []).find(j => j.id === s.id) || (state?.all_scored_jobs || []).find(j => j.id === s.id);
+                    const platform = jobMeta?.source || s.platform || 'General';
+                    const applyType = jobMeta?.apply_type || s.apply_type || 'easy_apply';
+                    return (
                     <React.Fragment key={idx}>
                       <tr 
                         onClick={() => setExpandedId(expandedId === idx ? null : idx)}
                         style={{ cursor: 'pointer', borderLeft: `4px solid ${s.score >= 70 ? 'var(--success)' : (s.score >= 50 ? 'var(--warning)' : 'var(--danger)')}` }}
                       >
                         <td style={{ paddingLeft: '20px' }}>
-                          <div style={{ fontWeight: 700, color: '#ffffff' }}>{s.title}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: 700, color: '#ffffff' }}>{s.title}</span>
+                            <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '4px', background: 'rgba(59, 130, 246, 0.2)', color: '#93c5fd', fontWeight: 600, textTransform: 'capitalize' }}>
+                              {platform}
+                            </span>
+                            <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '4px', background: applyType === 'easy_apply' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(168, 85, 247, 0.2)', color: applyType === 'easy_apply' ? '#6ee7b7' : '#d8b4fe', fontWeight: 600 }}>
+                              {applyType === 'easy_apply' ? '⚡ Easy Apply' : '🌐 Company Site'}
+                            </span>
+                          </div>
                           <div style={{ fontSize: '13px', color: '#cbd5e1', marginTop: '2px', fontWeight: 500 }}>{s.company}</div>
                         </td>
                         <td style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '16px', paddingRight: '20px' }}>
@@ -915,7 +1357,8 @@ function PersistentSnapshotView({ state, onReset }) {
                         </tr>
                       )}
                     </React.Fragment>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
            </div>
@@ -948,10 +1391,22 @@ function PersistentSnapshotView({ state, onReset }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {tailoredResults.map((s, idx) => (
+                    {tailoredResults.map((s, idx) => {
+                      const jobMeta = (state?.shortlisted_jobs || []).find(j => j.id === s.id) || (state?.all_scored_jobs || []).find(j => j.id === s.id);
+                      const platform = jobMeta?.source || s.platform || 'General';
+                      const applyType = jobMeta?.apply_type || s.apply_type || 'easy_apply';
+                      return (
                         <tr key={idx}>
                           <td style={{ paddingLeft: '20px' }}>
-                            <div style={{ fontWeight: 700, color: '#ffffff' }}>{s.title}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span style={{ fontWeight: 700, color: '#ffffff' }}>{s.title}</span>
+                              <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '4px', background: 'rgba(59, 130, 246, 0.2)', color: '#93c5fd', fontWeight: 600, textTransform: 'capitalize' }}>
+                                {platform}
+                              </span>
+                              <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '4px', background: applyType === 'easy_apply' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(168, 85, 247, 0.2)', color: applyType === 'easy_apply' ? '#6ee7b7' : '#d8b4fe', fontWeight: 600 }}>
+                                {applyType === 'easy_apply' ? '⚡ Easy Apply' : '🌐 Company Site'}
+                              </span>
+                            </div>
                             <div style={{ fontSize: '13px', color: '#cbd5e1', marginTop: '2px', fontWeight: 500 }}>{s.company}</div>
                           </td>
                           <td style={{ textAlign: 'right', paddingRight: '20px' }}>
@@ -963,7 +1418,8 @@ function PersistentSnapshotView({ state, onReset }) {
                               </button>
                           </td>
                         </tr>
-                    ))}
+                      );
+                    })}
                     {tailoredResults.length === 0 && (
                         <tr>
                           <td colSpan="2" style={{ textAlign: 'center', padding: '36px', color: '#cbd5e1', fontWeight: 500, fontSize: '15px' }}>No resumes generated</td>
@@ -1042,7 +1498,7 @@ export default function Dashboard() {
     return () => eventSource.close();
   }, []);
 
-  const handleStart = async (platforms, testMode, aiSettings = {}, jobTypes = ['fulltime', 'internship']) => {
+  const handleStart = async (platforms, testMode, aiSettings = {}, jobTypes = ['fulltime', 'internship'], hoursOld = 72, zeroAi = true) => {
     try {
       setError('');
       const endpoint = testMode ? '/api/test-start' : '/api/start';
@@ -1052,6 +1508,8 @@ export default function Dashboard() {
         body: JSON.stringify({ 
           platforms, 
           job_types: jobTypes,
+          hours_old: hoursOld,
+          zero_ai: zeroAi,
           dry_run: false,
           scoring_model: aiSettings.scoringModel,
           scoring_thinking: aiSettings.scoringThinking,

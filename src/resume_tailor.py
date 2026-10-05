@@ -116,6 +116,36 @@ CANONICAL_MASTER_PROJECTS = {
             "Optimized DOM-based rendering for instant visual feedback, ensuring a zero-lag gameplay experience.",
             "Built a robust state-validation algorithm to compare user-input arrays against patterns with 100% accuracy."
         ]
+    },
+    "personal_ai_os": {
+        "name": "Personal AI OS: Local LLM & Voice Agent Assistant",
+        "tech_stack": "Python, Ollama, LangChain, FastAPI, SQLite",
+        "link": "Python, Ollama, LangChain, FastAPI, SQLite",
+        "default_bullets": [
+            "Architected an autonomous local AI workstation agent integrating Ollama local LLMs and LangChain tool chains.",
+            "Engineered low-latency voice and text streaming pipelines with asynchronous FastAPI endpoints and SQLite session state.",
+            "Implemented custom tool-calling agents for automated file management, calendar synchronization, and browser automation."
+        ]
+    },
+    "medflow": {
+        "name": "MedFlow: Healthcare Appointment & Inventory Engine",
+        "tech_stack": "Java, Spring Boot, MySQL, REST APIs, JWT",
+        "link": "Java, Spring Boot, MySQL, REST APIs, JWT",
+        "default_bullets": [
+            "Engineered secure healthcare microservices with Spring Boot, JPA/Hibernate, and MySQL, handling patient scheduling.",
+            "Implemented role-based access control with JWT authentication, ensuring HIPAA compliance across hospital departments.",
+            "Optimized database indexing and transactional query pipelines, improving report generation throughput by 40%."
+        ]
+    },
+    "c54_casino": {
+        "name": "C54-Casino: Real-Time Multiplayer Gaming Platform",
+        "tech_stack": "React, Node.js, Socket.IO, Tailwind CSS",
+        "link": "React, Node.js, Socket.IO, Tailwind CSS",
+        "default_bullets": [
+            "Developed a full-stack real-time multiplayer casino platform with interactive card and wheel games.",
+            "Built bi-directional WebSocket game loops using Socket.IO, synchronizing multiplayer state across concurrent players.",
+            "Designed modern responsive cyber-themed interfaces with React, Vite, and Tailwind CSS."
+        ]
     }
 }
 
@@ -181,6 +211,16 @@ def _get_master_skill_lookup(master_resume: dict) -> tuple[dict, dict]:
     return raw_lookup, alias_lookup
 
 
+FABRICATED_DISALLOWED_SKILLS = {
+    "go", "golang", "r", "ml", "ai", "ci", "cd", "os", "ui", "ux", "c",
+    "php", "ruby", "rust", "swift", "dart", "perl", "vue", "angular",
+    "docker", "kubernetes", "aws", "gcp", "salesforce", "sap",
+    "spring boot 3", "ruby on rails", "express", "hadoop", "spark",
+    "pytorch", "tensorflow", "keras", "scikit-learn", "algos", "rithms",
+    "script", "end", "dev", "net core"
+}
+
+
 def is_valid_candidate_skill(skill: str, master_resume: dict, selected_skills: list[str] = None) -> tuple[bool, str]:
     """
     Validates whether a skill belongs strictly to candidate's master qualifications.
@@ -194,6 +234,9 @@ def is_valid_candidate_skill(skill: str, master_resume: dict, selected_skills: l
         for sel in selected_skills:
             if _normalize_skill(sel) == norm:
                 return True, sel
+
+    if norm in FABRICATED_DISALLOWED_SKILLS:
+        return False, ""
 
     raw_lookup, alias_lookup = _get_master_skill_lookup(master_resume)
 
@@ -397,14 +440,20 @@ def calculate_jd_requirement_coverage(
 
 
 def _match_project_key(name: str) -> str:
-    """Matches project name to one of 3 verified candidate projects."""
+    """Matches project name to one of the verified candidate master projects."""
     n = (name or "").lower()
-    if "smartapply" in n or "smart" in n or "apply" in n:
+    if "smartapply" in n or "job automation" in n or ("smart" in n and "apply" in n):
         return "smartapply"
-    if "campflow" in n or "camp" in n or "flow" in n or "hospitality" in n:
+    if "campflow" in n or "hospitality" in n or "camp" in n or "booking suite" in n or "bynry" in n:
         return "campflow"
-    if "neon" in n or "pulse" in n or "pattern" in n:
+    if "neon" in n or "pulse" in n or "pattern" in n or "dogstream" in n:
         return "neon_pulse"
+    if "personal" in n or "voice agent" in n or "ai os" in n or "ollama" in n:
+        return "personal_ai_os"
+    if "medflow" in n or "healthcare" in n or "clinic" in n:
+        return "medflow"
+    if "c54" in n or "casino" in n or "multiplayer" in n:
+        return "c54_casino"
     return ""
 
 
@@ -497,6 +546,9 @@ def validate_and_sanitize_tailored(
         is_valid, canonical = is_valid_candidate_skill(s, master_resume, selected_skills)
         if is_valid:
             norm = _normalize_skill(canonical)
+            if normalized_lens in ["qa", "java"] and norm in ["docker", "kubernetes", "aws"] and (not selected_skills or not any(_normalize_skill(x) == norm for x in selected_skills)):
+                logger.warning(f"   🛡️ Pruned out-of-lens skill for {normalized_lens}: '{s}'")
+                continue
             if norm not in seen_skills:
                 seen_skills.add(norm)
                 sanitized_skills.append(canonical)
@@ -567,28 +619,72 @@ def validate_and_sanitize_tailored(
                     if not replaced:
                         sanitized_skills.append(sel_str)
 
-    tailored["skills"] = sanitized_skills[:14]
+    tailored["skills"] = sanitized_skills[:20]
 
-    # ── 5. Retain All 3 Verified Projects with Role-Weighted Reordering ──
+    TOOLS_AND_CLOUD_VOCAB = {
+        "git", "github", "git/github", "azure", "microsoft azure", "microsoft azure fundamentals",
+        "mysql", "postman", "postman (api testing)", "vs code", "intellij", "intellij idea",
+        "maven", "agile/scrum", "scrum", "agile", "windows task scheduler", "excel",
+        "excel (automation)", "linux/bash", "bash", "vercel", "vercel & render",
+        "cursor ide & github copilot", "cursor ide", "github copilot", "sts",
+        "spring tool suite", "spring tool suite (sts)", "google cybersecurity cert",
+        "cybersecurity - google (coursera)", "google cybersecurity certificate"
+    }
+    tech_bucket = []
+    tools_bucket = []
+    for s in tailored["skills"]:
+        s_norm = _normalize_skill(s.split('(')[0].strip())
+        if s_norm in TOOLS_AND_CLOUD_VOCAB:
+            tools_bucket.append(s)
+        else:
+            tech_bucket.append(s)
+
+    tailored["skills_structured"] = {
+        "technical": tech_bucket,
+        "tools_and_cloud": tools_bucket
+    }
+
+    # ── 5. Retain 3 Verified Projects with Role-Weighted Dynamic Selection ──
     if normalized_lens == "fullstack":
-        priority_keys = ["campflow", "smartapply", "neon_pulse"]
-        budget_bullets = [3, 2, 2]
-    else:
-        priority_keys = ["smartapply", "campflow", "neon_pulse"]
-        budget_bullets = [3, 2, 2]
+        fallback_keys = ["campflow", "smartapply", "neon_pulse"]
+    elif normalized_lens == "java":
+        fallback_keys = ["smartapply", "campflow", "neon_pulse"]
+    elif normalized_lens == "dotnet":
+        fallback_keys = ["smartapply", "campflow", "neon_pulse"]
+    else:  # qa
+        fallback_keys = ["smartapply", "campflow", "neon_pulse"]
 
     raw_projects = tailored.get("projects", [])
     extracted_by_key = {}
+    ordered_keys = []
     for p in raw_projects:
         if isinstance(p, dict):
             key = _match_project_key(p.get("name", ""))
             if key and key not in extracted_by_key:
                 extracted_by_key[key] = p
+                ordered_keys.append(key)
 
+    selected_keys = []
+    # If the caller provided a tailored subset (<= 3 projects), respect their selection and ordering
+    if len(ordered_keys) <= 3:
+        for k in ordered_keys:
+            if k in CANONICAL_MASTER_PROJECTS and k not in selected_keys:
+                selected_keys.append(k)
+            if len(selected_keys) == 3:
+                break
+
+    # Fill up to 3 projects using role-weighted fallback_keys
+    for k in fallback_keys:
+        if k in CANONICAL_MASTER_PROJECTS and k not in selected_keys:
+            selected_keys.append(k)
+        if len(selected_keys) == 3:
+            break
+
+    budget_bullets = [3, 2, 2]
     final_projects = []
-    for rank_idx, key in enumerate(priority_keys):
+    for rank_idx, key in enumerate(selected_keys[:3]):
         meta = CANONICAL_MASTER_PROJECTS[key]
-        num_bullets = budget_bullets[rank_idx]
+        num_bullets = budget_bullets[rank_idx] if rank_idx < len(budget_bullets) else 2
         proposed = extracted_by_key.get(key, {})
 
         bullets = []
@@ -686,7 +782,8 @@ async def tailor_resume_async(job: Job, selected_skills: list[str] = None, stop_
         if stop_event and stop_event.is_set():
             return {}
 
-        job.tokens_used = getattr(job, 'tokens_used', 0) + tokens
+        tok_count = getattr(tokens, 'total_tokens', None) or (tokens.get('total_tokens') if isinstance(tokens, dict) else tokens) or 0
+        job.tokens_used = getattr(job, 'tokens_used', 0) + int(tok_count)
 
         # Robust Markdown stripping & brace extraction
         cleaned_text = response_text.strip()
@@ -756,12 +853,33 @@ async def tailor_resume_async(job: Job, selected_skills: list[str] = None, stop_
         )
 
 
-def tailor_resume(job: Job) -> dict:
+def tailor_resume_deterministic(job: Job, selected_skills: list[str] = None) -> dict:
+    """
+    100% deterministic, zero-AI resume tailoring.
+    Uses target role lenses, dynamic candidate skill auto-injection (M ∩ J),
+    and verified project ranking without making any external AI API calls.
+    Guarantees ₹0.00 cost, 0 API tokens, and 100% ATS compliance.
+    """
+    master_resume = load_resume()
+    role_lens = detect_role_lens(job)
+    return validate_and_sanitize_tailored(
+        tailored_data=copy.deepcopy(master_resume),
+        master_resume=master_resume,
+        role_lens=role_lens,
+        job=job,
+        selected_skills=selected_skills
+    )
+
+
+def tailor_resume(job: Job, use_ai: bool = True) -> dict:
+    if not use_ai:
+        selected = getattr(job, "user_selected_skills", None)
+        return tailor_resume_deterministic(job, selected_skills=selected)
     import asyncio
     selected = getattr(job, "user_selected_skills", None)
     return asyncio.run(tailor_resume_async(job, selected_skills=selected))
 
-async def tailor_resumes_batch_async(jobs: list[Job], skills_map: dict = None, stop_event=None) -> list[dict]:
+async def tailor_resumes_batch_async(jobs: list[Job], skills_map: dict = None, stop_event=None, use_ai: bool = True) -> list[dict]:
     import asyncio
     if not jobs:
         return []
@@ -770,6 +888,17 @@ async def tailor_resumes_batch_async(jobs: list[Job], skills_map: dict = None, s
         return []
 
     skills_map = skills_map or {}
+
+    # Zero-AI fast deterministic mode
+    if not use_ai:
+        results = []
+        for job in jobs:
+            if stop_event and stop_event.is_set():
+                break
+            sel = skills_map.get(job.id) or skills_map.get(str(job.id)) or getattr(job, "user_selected_skills", None)
+            results.append(tailor_resume_deterministic(job, selected_skills=sel))
+        return results
+
     first_skills = skills_map.get(jobs[0].id) or skills_map.get(str(jobs[0].id)) or getattr(jobs[0], "user_selected_skills", None)
     first_result = await tailor_resume_async(jobs[0], selected_skills=first_skills, stop_event=stop_event)
     
@@ -790,9 +919,9 @@ async def tailor_resumes_batch_async(jobs: list[Job], skills_map: dict = None, s
         
     return [first_result]
 
-def tailor_resumes_batch(jobs: list[Job], skills_map: dict = None, stop_event=None) -> list[dict]:
+def tailor_resumes_batch(jobs: list[Job], skills_map: dict = None, stop_event=None, use_ai: bool = True) -> list[dict]:
     import asyncio
-    return asyncio.run(tailor_resumes_batch_async(jobs, skills_map=skills_map, stop_event=stop_event))
+    return asyncio.run(tailor_resumes_batch_async(jobs, skills_map=skills_map, stop_event=stop_event, use_ai=use_ai))
 def tailor_resume_with_skills(job: Job, selected_skills: list[str]) -> str:
     import asyncio
     import os

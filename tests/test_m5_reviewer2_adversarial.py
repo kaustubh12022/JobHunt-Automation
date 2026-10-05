@@ -50,7 +50,7 @@ def test_r2_integrity_no_hardcoded_or_facade_hacks():
     template_path = Path(__file__).parent.parent / "templates" / "resume_template.html"
     tmpl_code = template_path.read_text(encoding="utf-8")
     assert "transform: scale" not in tmpl_code
-    assert "#1e40af" in tmpl_code
+    assert "#1e3a8a" in tmpl_code
     assert "Inter" in tmpl_code
 
 
@@ -111,7 +111,7 @@ def test_r2_plain_text_reading_order_and_no_scrambled_columns(tmp_path, master_r
     assert "Kaustubh" in top_text and "Kale" in top_text, f"Candidate name not at top: {top_text}"
 
     # Verify standard ATS headings
-    headings = ["PROFILE SUMMARY", "TECHNICAL SKILLS", "TECHNICAL PROJECTS", "WORK EXPERIENCE", "EDUCATION", "CERTIFICATIONS"]
+    headings = ["PROFILE SUMMARY", "EDUCATION", "TECHNICAL SKILLS", "PROJECTS", "WORK EXPERIENCE", "CERTIFICATIONS"]
     indices = [text.find(h) for h in headings]
     for h, idx in zip(headings, indices):
         assert idx != -1, f"Missing heading '{h}'"

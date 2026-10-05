@@ -11,6 +11,7 @@ class Job:
     id: Optional[str] = None
     source: str = ""          # Which platform (LinkedIn, Indeed, Workday, etc.)
     job_type: str = "fulltime" # fulltime or internship
+    apply_type: str = "easy_apply" # easy_apply or company_site
     score: Optional[int] = None
     missing_skills: Optional[List[str]] = None   # Skills candidate LACKS for this role
     reasons: Optional[str] = None
@@ -21,3 +22,6 @@ class Job:
     tailored_resume: Optional[dict] = None
     user_selected_skills: Optional[List[str]] = None
     tokens_used: int = 0
+    date_posted: Optional[object] = None
+    is_remote: Optional[bool] = False
+    raw_metadata: Optional[dict] = None

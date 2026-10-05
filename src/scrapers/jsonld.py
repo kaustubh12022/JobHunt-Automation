@@ -69,7 +69,8 @@ def extract_jsonld(url: str) -> list[Job]:
                         location=location,
                         description=description,
                         url=url,
-                        source="jsonld"
+                        source="jsonld",
+                        apply_type="company_site"
                     ))
                     
     except Exception as e:

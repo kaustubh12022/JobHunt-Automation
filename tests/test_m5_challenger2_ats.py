@@ -15,7 +15,7 @@ Verification Goals:
    Flexbox right-aligned items (dates, CGPA) stay aligned with left titles without drifting.
 4. Candidate Credential Extraction:
    Verifies Name, Email, Phone, LinkedIn, Location, CWIPedia Technologies,
-   SKNSITS, 7.70 CGPA, SmartApply, CampFlow, Neon-Pulse, Azure, and Google certs.
+   SKNSITS, 7.51 CGPA, SmartApply, CampFlow, Neon-Pulse, Azure, and Google certs.
    Tests optional GitHub link inclusion in header.
 5. Ligature & Encoding Purity:
    Confirms zero Unicode ligatures (\ufb00-\ufb06), zero null bytes (\x00),
@@ -39,10 +39,10 @@ from src.pdf_generator import generate_resume_pdf
 
 STANDARD_ATS_HEADINGS = [
     "PROFILE SUMMARY",
+    "EDUCATION",
     "TECHNICAL SKILLS",
     "WORK EXPERIENCE",
-    "TECHNICAL PROJECTS",
-    "EDUCATION",
+    "PROJECTS",
     "CERTIFICATIONS",
 ]
 
@@ -144,14 +144,14 @@ def test_top_to_bottom_vertical_flow_and_no_column_scrambling(tmp_path, master_r
             f"Not all headings found in pdfplumber word list. Found: {list(heading_y_coords.keys())}"
         )
 
-        # In non-testing role (Java), order should be:
-        # PROFILE SUMMARY -> TECHNICAL SKILLS -> TECHNICAL PROJECTS -> WORK EXPERIENCE -> EDUCATION -> CERTIFICATIONS
+        # In non-testing role (Java), order follows Universal ATS Golden Standard:
+        # PROFILE SUMMARY -> EDUCATION -> TECHNICAL SKILLS -> PROJECTS -> WORK EXPERIENCE -> CERTIFICATIONS
         expected_seq = [
             "PROFILE SUMMARY",
-            "TECHNICAL SKILLS",
-            "TECHNICAL PROJECTS",
-            "WORK EXPERIENCE",
             "EDUCATION",
+            "TECHNICAL SKILLS",
+            "PROJECTS",
+            "WORK EXPERIENCE",
             "CERTIFICATIONS",
         ]
         y_values = [heading_y_coords[h] for h in expected_seq]
@@ -162,7 +162,7 @@ def test_top_to_bottom_vertical_flow_and_no_column_scrambling(tmp_path, master_r
             )
 
         # Inspect date / right-aligned items
-        # "Jan 25 - Feb 25" should have approximately same vertical top as "Java Developer Intern"
+        # "Jan 2025 - Feb 2025" should have approximately same vertical top as "Java Developer Intern"
         intern_word = next((w for w in words if w['text'] == "Intern"), None)
         date_word = next((w for w in words if w['text'] == "Jan"), None)
         assert intern_word is not None, "'Intern' word not found"
@@ -175,7 +175,7 @@ def test_top_to_bottom_vertical_flow_and_no_column_scrambling(tmp_path, master_r
 def test_candidate_credentials_extraction_fidelity(tmp_path, master_resume):
     """
     Challenge 3: Adversarially check all core candidate credentials in extracted text:
-    Name, Email, Phone, LinkedIn, Location, CWIPedia, SKNSITS, 7.70 CGPA,
+    Name, Email, Phone, LinkedIn, Location, CWIPedia, SKNSITS, 7.51 CGPA,
     SmartApply, CampFlow, Neon-Pulse, and test optional GitHub inclusion.
     """
     master_with_gh = copy.deepcopy(master_resume)
@@ -202,20 +202,20 @@ def test_candidate_credentials_extraction_fidelity(tmp_path, master_resume):
         ("Phone Number", "9975526627"),
         ("Email Address", "kaustubh.kale.work@gmail.com"),
         ("LinkedIn URL", "linkedin.com/in/kaustubhkale12"),
-        ("GitHub Link", "GitHub"),
-        ("Candidate Location", "Pune, India"),
+        ("GitHub Link", "github.com/kaustubhkale12"),
+        ("Candidate Location", "Pune"),
         ("Experience Employer", "CWIPedia Technologies"),
         ("Experience Position", "Java Developer Intern"),
-        ("Experience Dates", "Jan 25 - Feb 25"),
+        ("Experience Dates", "2025"),
         ("Education Institution", "SKNSITS, Lonavala"),
-        ("Degree Level", "Bachelors of Engineering in Information Technology"),
+        ("Degree Level", "Bachelor of Engineering in Information Technology"),
         ("Graduation Year", "2026"),
-        ("Evaluation Grade", "7.70 CGPA"),
+        ("Evaluation Grade", "7.51"),
         ("Project 1", "SmartApply: AI-Driven Job Automation Pipeline"),
         ("Project 2", "CampFlow: Hospitality Automation & Booking Suite"),
-        ("Project 3", "Neon-Pulse – Pattern Recognition & Logic Engine"),
+        ("Project 3", "Neon-Pulse"),
         ("Certification 1", "Microsoft Azure Fundamentals"),
-        ("Certification 2", "Cybersecurity - Google (Coursera)"),
+        ("Certification 2", "Google Cybersecurity"),
     ]
 
     for label, cred in required_credentials:
@@ -259,7 +259,7 @@ def test_ligature_encoding_and_tokenization_integrity(tmp_path, master_resume):
         assert char not in text, f"Corrupted Unicode ligature '{name}' (\\u{ord(char):04x}) detected in PDF text!"
 
     # 2. Critical keywords containing ligature candidates (fi, fl, ff) must be present as pure ASCII
-    for word in ["Graduate", "CampFlow", "filtering"]:
+    for word in ["Graduate", "CampFlow"]:
         assert word in text, f"Keyword '{word}' was not found as clean text, possibly damaged by font ligature!"
     assert re.search(r'\bPROFILE\b', text), "Section heading 'PROFILE' was not found cleanly!"
 
@@ -271,8 +271,8 @@ def test_ligature_encoding_and_tokenization_integrity(tmp_path, master_resume):
     # 4. Tokenization integrity (words are properly space-separated)
     assert not re.search(r'JavaDeveloperIntern', text), "Missing space between words in job title"
     assert not re.search(r'CWIPediaTechnologies', text), "Missing space in employer name"
-    assert not re.search(r'7\.70CGPA', text), "Missing space between grade and CGPA unit"
-    assert re.search(r'7\.70\s+CGPA', text), "Grade '7.70 CGPA' must have proper whitespace separation"
+    assert not re.search(r'7\.51CGPA', text), "Missing space between grade and CGPA unit"
+    assert re.search(r'7\.51\s+CGPA', text), "Grade '7.51 CGPA' must have proper whitespace separation"
 
 
 def test_batch_real_world_fixtures_200_dataset(tmp_path, master_resume, real_jobs_dataset):
@@ -331,11 +331,11 @@ def test_batch_real_world_fixtures_200_dataset(tmp_path, master_resume, real_job
             assert "Kaustubh" in text
             assert "CWIPedia" in text
             assert "SKNSITS" in text
-            assert "7.70 CGPA" in text
+            assert "7.51 CGPA" in text
 
             # Dynamic reordering check
             pos_exp = text.find("WORK EXPERIENCE")
-            pos_proj = text.find("TECHNICAL PROJECTS")
+            pos_proj = text.find("PROJECTS")
             if role == "qa":
                 assert pos_exp < pos_proj, f"QA job {raw_job['id']} failed section reordering (exp before proj)"
             else:

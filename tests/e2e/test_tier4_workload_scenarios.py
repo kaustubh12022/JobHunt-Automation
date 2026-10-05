@@ -269,7 +269,8 @@ def test_tier4_scenario_3_fresher_dotnet_developer_mumbai(master_resume, zero_ha
 
     with patch('src.ai_engine.call_ai_scoring_async', side_effect=mock_score), \
          patch('src.scorer.call_ai_scoring_async', side_effect=mock_score), \
-         patch('src.db.get_cached_jd_score', return_value=None):
+         patch('src.db.get_cached_jd_score', return_value=None), \
+         patch('src.config_loader.load_config', return_value={"scoring": {"minimum_score": 60}}):
         scored_jobs = score_jobs([dotnet_job], test_mode=False)
         # Threshold 60 -> 65% passes!
         assert len(scored_jobs) == 1

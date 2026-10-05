@@ -32,8 +32,8 @@ def test_stress_fabricated_short_and_substring_skills(master_resume):
     fabricated_skills = [
         "Go", "golang", "R", "ML", "AI", "CI", "CD", "OS", "UI", "UX", "C",
         "PHP", "Ruby", "Rust", "Swift", "Dart", "Perl", "Vue", "Angular",
-        "React", "Docker", "Kubernetes", "AWS", "GCP", "Salesforce", "SAP",
-        "Spring Boot 3", "Ruby on Rails", "Node", "Express", "Hadoop", "Spark",
+        "Docker", "Kubernetes", "AWS", "GCP", "Salesforce", "SAP",
+        "Spring Boot 3", "Ruby on Rails", "Express", "Hadoop", "Spark",
         "PyTorch", "TensorFlow", "Keras", "Scikit-Learn", "Algos", "rithms",
         "script", "end", "dev", "net core"
     ]
@@ -124,7 +124,7 @@ def test_stress_experience_senior_and_duration_sanitization(master_resume, hosti
         f"Hostile position '{hostile_position}' was not sanitized! Got '{exp['position']}'"
     )
     assert exp["company"] == "CWIPedia Technologies"
-    assert exp["employment_period"] == "Jan 25 - Feb 25"
+    assert exp["employment_period"] == "Jan 2025 - Feb 2025"
     assert exp["location"] == "Pune, India"
 
 

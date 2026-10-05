@@ -1,4 +1,4 @@
-﻿"""
+"""
 Challenger 1 Adversarial Stress Test Suite for Milestone 4.
 Empirically stress-tests zero-hallucination guardrails, immutability locking,
 project retention, and boilerplate stripping against adversarial payloads.
@@ -31,8 +31,8 @@ def test_adversarial_zero_hallucination_prunes_all_fake_skills(master_resume, ze
         "profile_summary": "Fabricated summary claiming extensive cloud and systems mastery.",
         "skills": [
             "AWS",
-            "Docker",
-            "Kubernetes",
+            "Salesforce",
+            "Snowflake",
             "Ruby",
             "Go",
             "SAP",
@@ -53,8 +53,8 @@ def test_adversarial_zero_hallucination_prunes_all_fake_skills(master_resume, ze
 
     # Explicitly verify fabricated skills from dispatch are pruned
     assert "AWS" not in skills, "AWS must be pruned"
-    assert "Docker" not in skills, "Docker must be pruned"
-    assert "Kubernetes" not in skills, "Kubernetes must be pruned"
+    assert "Salesforce" not in skills, "Salesforce must be pruned"
+    assert "Snowflake" not in skills, "Snowflake must be pruned"
     assert "Ruby" not in skills, "Ruby must be pruned"
     assert "SAP" not in skills, "SAP must be pruned"
     assert "SAP ABAP" not in skills, "SAP ABAP must be pruned"
@@ -120,10 +120,10 @@ def test_adversarial_locks_education_credentials(master_resume):
     sanitized = validate_and_sanitize_tailored(tampered, master_resume, role_lens="java")
     edu = sanitized["education_details"]
 
-    assert len(edu) == 1, "Must retain candidate's single authentic education record"
-    assert edu[0]["institution"] == "SKNSITS, Lonavala"
-    assert edu[0]["education_level"] == "Bachelors of Engineering in Information Technology"
-    assert edu[0]["final_evaluation_grade"] == "7.70 CGPA"
+    assert len(edu) == len(master_resume["education_details"]), "Must retain candidate's authentic education records"
+    assert edu[0]["institution"] == master_resume["education_details"][0]["institution"]
+    assert edu[0]["education_level"] == master_resume["education_details"][0]["education_level"]
+    assert edu[0]["final_evaluation_grade"] == master_resume["education_details"][0]["final_evaluation_grade"]
     assert edu[0]["year_of_completion"] == "2026"
 
 
@@ -148,7 +148,7 @@ def test_adversarial_locks_employer_and_role(master_resume):
     exp = sanitized["experience_details"][0]
 
     assert exp["company"] == "CWIPedia Technologies"
-    assert exp["employment_period"] == "Jan 25 - Feb 25"
+    assert exp["employment_period"] == "Jan 2025 - Feb 2025"
     assert exp["location"] == "Pune, India"
 
     # CRITICAL CHALLENGE: Check if 'Staff Engineer, 5 yrs' leaked into position!

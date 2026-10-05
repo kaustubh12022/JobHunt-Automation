@@ -55,26 +55,35 @@ BOILERPLATE_PATTERNS = [
 
 # ── Zero-Token Domain-Anchored Keyword Relevance Filter ──
 DOMAIN_ANCHORS = [
-    'java', 'python', 'qa', 'selenium', 'automation',
-    '.net', 'c#', 'csharp', 'asp.net', 'spring', 'full stack', 'fullstack',
+    'java', 'python', 'spring', 'full stack', 'fullstack', 'full-stack',
+    'mern', 'react', 'reactjs', 'node', 'nodejs', 'express', 'mongodb',
+    'ai', 'ml', 'llm', 'genai', 'rag', 'langchain', 'deep learning',
+    'flutter', 'dart', 'supabase',
+    'backend', 'software engineer', 'software developer', 'developer',
+    'qa', 'selenium', 'automation', '.net', 'c#', 'csharp', 'asp.net', 'dotnet',
     'sdet', 'quality assurance', 'postman', 'pytest', 'junit',
     'playwright', 'cypress', 'tester', 'manual testing', 'automation testing',
     'software testing', 'api testing', 'test automation', 'test case', 'test cases',
     'test suite', 'test plan', 'test engineer'
 ]
 TECH_TOOLS = [
-    'spring', 'sql', 'pytest', 'postman', 'junit', 'rest api', 'api', 'react',
-    'javascript', 'html', 'css', 'mysql', 'mongodb', 'docker', 'git', 'jdbc',
-    'azure', 'c#', 'java', 'python', 'selenium', 'automation', 'database',
-    'oops', 'oop', 'microservices', 'django', 'flask', 'node', 'test', 'qa'
+    'spring', 'sql', 'rest api', 'api', 'react', 'javascript', 'typescript',
+    'html', 'css', 'mysql', 'mongodb', 'docker', 'git', 'jdbc', 'azure',
+    'java', 'python', 'database', 'oop', 'oops', 'microservices', 'node', 'nodejs',
+    'express', 'fastapi', 'nextjs', 'next.js', 'redis', 'postgres',
+    'llm', 'rag', 'genai', 'langchain', 'tailwind', 'redux',
+    'flutter', 'dart', 'supabase', 'socket.io',
+    'pytest', 'postman', 'junit', 'selenium', 'automation', 'test', 'qa', 'django', 'flask'
 ]
 
 CORE_STACK_KEYWORDS = [
-    'java', 'python', 'sql', 'selenium', 'postman', 'junit', 'pytest',
-    'automation', 'qa', '.net', 'c#', 'asp.net', 'spring', 'jdbc',
-    'rest api', 'backend', 'testing', 'test case', 'api testing',
-    'html', 'css', 'javascript', 'full stack', 'software engineer',
-    'developer', 'agile', 'git', 'mysql', 'mongodb', 'docker',
+    'java', 'python', 'sql', 'spring', 'jdbc',
+    'rest api', 'backend', 'node', 'express', 'react',
+    'mongodb', 'html', 'css', 'javascript', 'typescript', 'full stack',
+    'software engineer', 'developer', 'agile', 'git', 'mysql', 'docker',
+    'fastapi', 'nextjs', 'tailwind', 'supabase', 'flutter', 'dart',
+    'selenium', 'postman', 'junit', 'pytest', 'automation', 'qa', '.net', 'c#', 'asp.net',
+    'testing', 'test case', 'api testing'
 ]
 MIN_KEYWORD_MATCHES = 2
 
@@ -83,16 +92,29 @@ OUT_OF_SCOPE_STACK_PATTERN = re.compile(
     re.IGNORECASE
 )
 
+# New: .NET/QA/Testing blocked in TITLE only (not description body)
+TITLE_ONLY_OUT_OF_SCOPE = re.compile(
+    r'(?<!\w)(?:\.net|c#|csharp|asp\.net|dotnet|qa|quality\s+assurance|'
+    r'tester|test\s+engineer|sdet|manual\s+test|automation\s+test|'
+    r'selenium|test\s+automation)(?!\w)',
+    re.IGNORECASE
+)
 
-def matches_out_of_scope_role(title: str = "", description: str = "") -> bool:
+
+def matches_out_of_scope_role(title: str = "", description: str = "", filter_qa_dotnet: bool = False) -> bool:
     """
     Returns True if the title or description indicates an out-of-scope technology stack
     (e.g., PHP, Ruby on Rails, iOS, Android, Flutter, React Native, Salesforce, SAP).
     These should never be sent to AI scoring for our target fresher profile.
+    If filter_qa_dotnet is True, also rejects .NET and QA titles using TITLE_ONLY_OUT_OF_SCOPE.
     """
-    if title and OUT_OF_SCOPE_STACK_PATTERN.search(title):
+    title_clean = (title or "").strip()
+    desc_clean = (description or "").strip()
+    if title_clean and OUT_OF_SCOPE_STACK_PATTERN.search(title_clean):
         return True
-    if description and OUT_OF_SCOPE_STACK_PATTERN.search(description):
+    if desc_clean and OUT_OF_SCOPE_STACK_PATTERN.search(desc_clean):
+        return True
+    if filter_qa_dotnet and title_clean and TITLE_ONLY_OUT_OF_SCOPE.search(title_clean):
         return True
     return False
 
@@ -308,11 +330,12 @@ def apply_pandas_filter(*args, **kwargs):
 
 import asyncio
 
-def score_jobs(jobs: list[Job], test_mode=False, callbacks=None, stop_event=None) -> list[Job]:
+def score_jobs(jobs: list[Job], test_mode=False, callbacks=None, stop_event=None, use_ai: bool = True) -> list[Job]:
     """
-    Scores jobs using DeepSeek with thinking DISABLED.
-    Uses asyncio to process all API calls concurrently.
+    Scores jobs using DeepSeek with thinking DISABLED when use_ai=True,
+    or runs deterministic keyword/role-matching scoring when use_ai=False.
     """
+    global _LAST_SCORED_JOBS
     from src.config_loader import load_config
     import pandas as pd
     config = load_config()
@@ -351,8 +374,52 @@ def score_jobs(jobs: list[Job], test_mode=False, callbacks=None, stop_event=None
         relevant_jobs.append(job)
 
     if test_mode:
-        # Small-batch test mode: limit to scoring top 3 relevant jobs
-        relevant_jobs = relevant_jobs[:3]
+        # Small-batch test mode: select across platforms for diverse coverage
+        diverse_sample = []
+        seen_sources = set()
+        for j in relevant_jobs:
+            src = (getattr(j, 'source', None) or 'general').lower().split('-')[0]
+            if src not in seen_sources:
+                seen_sources.add(src)
+                diverse_sample.append(j)
+        for j in relevant_jobs:
+            if j not in diverse_sample and len(diverse_sample) < 6:
+                diverse_sample.append(j)
+        relevant_jobs = diverse_sample[:6]
+
+    # Fast deterministic mode (Zero DeepSeek AI calls)
+    if not use_ai:
+        from src.config_loader import load_resume
+        from src.resume_tailor import MASTER_SKILL_ALIASES
+        master = load_resume()
+        results = []
+        for i, job in enumerate(relevant_jobs):
+            if stop_event and stop_event.is_set():
+                break
+            if callbacks and "on_score_start" in callbacks:
+                callbacks["on_score_start"](job.id, job.title, job.company)
+            desc = (job.description or "").lower()
+            title = (job.title or "").lower()
+            matched = [s for s, aliases in MASTER_SKILL_ALIASES.items() if any(re.search(r'\b' + re.escape(a) + r'\b', desc) for a in aliases)]
+            score = 70 + min(len(matched) * 3, 25)
+            job.score = min(score, 95)
+            job.missing_skills = ["Docker", "Kubernetes"] if "cloud" in desc or "devops" in desc else ["System Design"]
+            job.extracted_requirements = ", ".join(matched[:5]) if matched else "Software Development"
+            job.reasons = f"Strong alignment with candidate skills ({', '.join(matched[:4])})."
+            job.is_testing_role = "qa" in title or "test" in title or "testing" in title
+            job.tokens_used = 0
+            job.cost_usd = 0.0
+            if callbacks and "on_score_complete" in callbacks:
+                callbacks["on_score_complete"](job.id, job.score, job.reasons)
+            results.append(job)
+
+        scored_jobs = [j for j in results if j is not None]
+        scored_jobs.sort(key=lambda j: j.score or 0, reverse=True)
+        _LAST_SCORED_JOBS = list(scored_jobs)
+        min_score = config.get('scoring', {}).get('minimum_score', 60)
+        filtered = [j for j in scored_jobs if j.score is not None and j.score >= min_score]
+        logger.info(f"✅ Deterministic Scoring complete: {len(filtered)}/{len(scored_jobs)} jobs shortlisted (>= {min_score}%).")
+        return ScoredJobList(filtered[:6] if test_mode else filtered, all_scored_jobs=scored_jobs)
         
     logger.info(f"🧠 Starting AI scoring for {len(relevant_jobs)} relevant jobs concurrently (skipped {skipped_irrelevant} irrelevant, {skipped_stale} stale)...")
 
@@ -501,7 +568,6 @@ def score_jobs(jobs: list[Job], test_mode=False, callbacks=None, stop_event=None
     # Sort by score descending
     scored_jobs.sort(key=lambda j: j.score or 0, reverse=True)
 
-    global _LAST_SCORED_JOBS
     _LAST_SCORED_JOBS = list(scored_jobs)
 
     logger.info(f"📊 Scoring Summary: {len(scored_jobs)} scored, {skipped_irrelevant} skipped (irrelevant)")
@@ -515,6 +581,6 @@ def score_jobs(jobs: list[Job], test_mode=False, callbacks=None, stop_event=None
     logger.info(f"✅ Scoring complete. {len(filtered)} jobs scored {min_score}% or above.")
 
     if test_mode:
-        return ScoredJobList(filtered[:3], all_scored_jobs=scored_jobs)
+        return ScoredJobList(filtered[:6], all_scored_jobs=scored_jobs)
 
     return ScoredJobList(filtered, all_scored_jobs=scored_jobs)

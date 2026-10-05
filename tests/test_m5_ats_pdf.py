@@ -2,7 +2,7 @@
 Milestone 5 Test Suite: 1-Page ATS-Friendly PDF Resume Generation.
 Verifies:
 1. Zero transform: scale() or scaleFactor hacks in src/pdf_generator.py.
-2. Modern sans-serif typography (Inter/sans-serif) and subtle royal blue accents (#1e40af).
+2. Modern sans-serif typography (Inter/sans-serif) and subtle royal blue accents (#1e3a8a).
 3. Standard ATS uppercase headings (PROFILE SUMMARY, TECHNICAL SKILLS, WORK EXPERIENCE,
    TECHNICAL PROJECTS, EDUCATION, CERTIFICATIONS).
 4. Jinja2 rendering accommodates all 3 projects (SmartApply, CampFlow, Neon-Pulse) without unrendered tags.
@@ -74,7 +74,7 @@ def test_no_transform_scale_hack():
 
 
 def test_template_sans_serif_and_blue_accent():
-    """Verify templates/resume_template.html includes clean sans-serif typography and royal blue accent #1e40af."""
+    """Verify templates/resume_template.html includes clean sans-serif typography and royal blue accent #1e3a8a."""
     template_path = Path(__file__).parent.parent / "templates" / "resume_template.html"
     assert template_path.exists(), "templates/resume_template.html must exist"
     content = template_path.read_text(encoding="utf-8")
@@ -84,7 +84,7 @@ def test_template_sans_serif_and_blue_accent():
     assert "Inter" in content, "'Inter' font must be present in font-family stack"
 
     # Subtle royal blue accent assert
-    assert "#1e40af" in content, "Royal blue accent color #1e40af must be present in template"
+    assert "#1e3a8a" in content, "Royal blue accent color #1e3a8a must be present in template"
     assert "border-bottom" in content, "Section header bottom border accent must be present"
 
 
@@ -97,7 +97,7 @@ def test_template_ats_headings():
         "PROFILE SUMMARY",
         "TECHNICAL SKILLS",
         "WORK EXPERIENCE",
-        "TECHNICAL PROJECTS",
+        "PROJECTS",
         "EDUCATION",
         "CERTIFICATIONS",
     ]
@@ -164,7 +164,7 @@ def test_plain_text_extractability(tmp_path, master_resume_data, sample_job_java
     expected_headers = [
         "PROFILE SUMMARY",
         "TECHNICAL SKILLS",
-        "TECHNICAL PROJECTS",
+        "PROJECTS",
         "WORK EXPERIENCE",
         "EDUCATION",
         "CERTIFICATIONS",
@@ -214,7 +214,7 @@ def test_dynamic_section_reordering(tmp_path, master_resume_data, sample_job_qa,
     generate_resume_pdf(tailored_qa, str(pdf_qa), job=sample_job_qa)
     text_qa = pypdf.PdfReader(str(pdf_qa)).pages[0].extract_text()
     pos_exp_qa = text_qa.find("WORK EXPERIENCE")
-    pos_proj_qa = text_qa.find("TECHNICAL PROJECTS")
+    pos_proj_qa = text_qa.find("PROJECTS")
     assert pos_exp_qa != -1 and pos_proj_qa != -1
     assert pos_exp_qa < pos_proj_qa, "For testing roles, WORK EXPERIENCE must appear before TECHNICAL PROJECTS"
 
@@ -224,6 +224,6 @@ def test_dynamic_section_reordering(tmp_path, master_resume_data, sample_job_qa,
     generate_resume_pdf(tailored_java, str(pdf_java), job=sample_job_java)
     text_java = pypdf.PdfReader(str(pdf_java)).pages[0].extract_text()
     pos_exp_java = text_java.find("WORK EXPERIENCE")
-    pos_proj_java = text_java.find("TECHNICAL PROJECTS")
+    pos_proj_java = text_java.find("PROJECTS")
     assert pos_exp_java != -1 and pos_proj_java != -1
     assert pos_proj_java < pos_exp_java, "For non-testing roles, TECHNICAL PROJECTS must appear before WORK EXPERIENCE"

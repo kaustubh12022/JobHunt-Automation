@@ -461,7 +461,7 @@ START
 - `save_pipeline_results()` — Inserts a pipeline run record, uploads generated PDFs to Supabase Storage, inserts each shortlisted job with full metadata (source, requirements, tailored resume), and creates an application record (status: "generated").
 - `delete_pipeline_run()` — Cascade-deletes a run: status_history → applications → tracked_jobs → pipeline_runs. Deletes associated PDFs from Supabase Storage.
 - `get_job_pdf_path()` — Retrieves the PDF path/URL for a tracked job.
-- `cleanup_old_pdfs()` — Background auto-cleanup function that removes PDFs older than 30 days if the status is "generated", "rejected", or "custom".
+- `cleanup_old_pdfs()` — Auto-cleanup function (permanently disabled: all resumes and PDF files are retained in Supabase indefinitely).
 - **Caching Functions**: `get_cached_jd_score()` and `save_jd_cache()` manage the `jd_cache` table to prevent re-scoring duplicate jobs.
 - **Sampling Functions**: `sample_raw_jobs()`, `sample_scored_jobs()`, and `sample_tailored_jobs()` provide database records for the Test Engine.
 

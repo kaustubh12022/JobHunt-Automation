@@ -1,0 +1,74 @@
+{
+  "timestamp": "2026-09-29T14:19:51.825510+00:00",
+  "total_jobs_scraped": 1137,
+  "files_verified": {
+    "permanent_jsonl": {
+      "path": "C:\\Users\\kalek\\Desktop\\Projects\\Job_Hunt\\regex_audit\\master_raw_dataset_2026-09-29.jsonl",
+      "exists": true,
+      "size_bytes": 6407800,
+      "size_mb": 6.11,
+      "records_counted": 1137,
+      "syntax_valid": true
+    },
+    "permanent_json": {
+      "path": "C:\\Users\\kalek\\Desktop\\Projects\\Job_Hunt\\regex_audit\\master_raw_dataset_2026-09-29.json",
+      "exists": true,
+      "size_bytes": 6761410,
+      "size_mb": 6.45,
+      "records_counted": 1137,
+      "syntax_valid": true
+    },
+    "data_folder_json": {
+      "path": "C:\\Users\\kalek\\Desktop\\Projects\\Job_Hunt\\data_folder\\master_raw_dataset_2026-09-29.json",
+      "exists": true,
+      "size_bytes": 6761410,
+      "size_mb": 6.45,
+      "records_counted": 1137,
+      "syntax_valid": true
+    },
+    "desktop_json": {
+      "path": "C:\\Users\\kalek\\Desktop\\master_raw_jobs_2026-09-29.json",
+      "exists": true,
+      "size_bytes": 6761410,
+      "size_mb": 6.45,
+      "records_counted": 1137,
+      "syntax_valid": true
+    },
+    "desktop_output_json": {
+      "path": "C:\\Users\\kalek\\Desktop\\AutoApply_Output\\master_raw_jobs_2026-09-29.json",
+      "exists": true,
+      "size_bytes": 6761410,
+      "size_mb": 6.45,
+      "records_counted": 1137,
+      "syntax_valid": true
+    }
+  },
+  "integrity_checks": {
+    "all_records_have_id": true,
+    "valid_title_ratio": "1137/1137 (100.0%)",
+    "valid_company_ratio": "1137/1137 (100.0%)",
+    "valid_location_ratio": "1118/1137 (98.3%)",
+    "non_empty_description_ratio": "1137/1137 (100.0%)",
+    "valid_url_ratio": "1137/1137 (100.0%)",
+    "zero_missing_records": true
+  },
+  "dataset_statistics": {
+    "platform_breakdown": {
+      "indeed": 657,
+      "linkedin": 480
+    },
+    "job_type_breakdown": {
+      "internship": 328,
+      "fulltime": 809
+    },
+    "top_locations": {
+      "MH, IN": 418,
+      "Bengaluru, Karnataka, India": 405,
+      "KA, IN": 239,
+      "Bengaluru East, Karnataka, India": 36,
+      "Unknown": 19,
+      "Bangalore Urban, Karnataka, India": 17,
+      "Bengaluru North, Karnataka, India": 3
+    }
+  }
+}

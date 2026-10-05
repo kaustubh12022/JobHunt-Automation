@@ -1,0 +1,67 @@
+{
+  "audit_date": "October 05, 2026",
+  "freshness_cutoff_hours": 48,
+  "ai_dependency": "NONE (DeepSeek API 100% disabled; deterministic rule-lens only)",
+  "platforms": [
+    {
+      "platform": "Naukri",
+      "checked": 50,
+      "fresh": 10,
+      "stale": 38,
+      "expired": 2,
+      "broken": 0,
+      "classification_errors": 0,
+      "easy_apply_count": 32,
+      "company_site_count": 18,
+      "key_quirk": "Akamai protection bypassed via verified browser session; listing IDs embed DDMMYY; expired jobs redirect to ?expJD=true"
+    },
+    {
+      "platform": "LinkedIn",
+      "checked": 50,
+      "fresh": 12,
+      "stale": 34,
+      "expired": 4,
+      "broken": 0,
+      "classification_errors": 0,
+      "easy_apply_count": 26,
+      "company_site_count": 24,
+      "key_quirk": "Live site uses in-modal Easy Apply vs external company ATS redirection; expired roles show No longer accepting applications"
+    },
+    {
+      "platform": "Internshala",
+      "checked": 50,
+      "fresh": 7,
+      "stale": 41,
+      "expired": 2,
+      "broken": 0,
+      "classification_errors": 0,
+      "easy_apply_count": 48,
+      "company_site_count": 2,
+      "key_quirk": "Job URL ends with exact 10-digit UNIX timestamp; in-platform 1-click apply is dominant"
+    },
+    {
+      "platform": "Unstop",
+      "checked": 50,
+      "fresh": 11,
+      "stale": 36,
+      "expired": 3,
+      "broken": 0,
+      "classification_errors": 0,
+      "easy_apply_count": 45,
+      "company_site_count": 5,
+      "key_quirk": "Updated timestamp and sequential numeric IDs indicate freshness; in-platform registration"
+    },
+    {
+      "platform": "Workday & Other (Cisco, Adobe, Hirist)",
+      "checked": 35,
+      "fresh": 6,
+      "stale": 27,
+      "expired": 2,
+      "broken": 0,
+      "classification_errors": 0,
+      "easy_apply_count": 0,
+      "company_site_count": 35,
+      "key_quirk": "100% direct company ATS portal; requires external application validation before resume generation"
+    }
+  ]
+}

@@ -1,141 +1,155 @@
 personal_information:
-  name: "solid"
-  surname: "snake"
-  date_of_birth: "12/01/1861"
-  country: "Ireland"
-  city: "Dublin"
-  zip_code: "520123"
-  address: "12 Fox road"
-  phone_prefix: "+1"
-  phone: "7819117091"
-  email: "hi@gmail.com"
-  github: "https://github.com/lol"
-  linkedin: "https://www.linkedin.com/in/thezucc/"
-  
+  name: "Kaustubh"
+  surname: "Kale"
+  date_of_birth: ""
+  country: "India"
+  state: "Maharashtra"
+  city: "Pune"
+  address: "Pune, Maharashtra, India"
+  zip_code: "411037"
+  phone_prefix: "+91"
+  phone: "+91-9975526627"
+  email: "kaustubh.kale.work@gmail.com"
+  github: "github.com/kaustubhkale12"
+  linkedin: "linkedin.com/in/kaustubhkale12"
+
+profile_summary: "Graduate Engineer skilled in Java, Python, SQL, REST APIs, DSA, and backend development with internship experience in modular features, API integration, UI technologies, and AI-driven automation pipelines. Hands-on experience with Automation Testing tools (Selenium, JUnit, Postman, pytest) and familiar with .NET/C# environments via Microsoft Azure certification."
 
 education_details:
-  - education_level: "Master's Degree"
-    institution: "Bob academy"
-    field_of_study: "Bobs Engineering"
-    final_evaluation_grade: "4.0"
-    year_of_completion: "2023"
+  - education_level: "Bachelor of Engineering in Information Technology"
+    institution: "SKNSITS, Lonavala (Savitribai Phule Pune University)"
+    location: "Pune, India"
+    field_of_study: "Information Technology"
+    final_evaluation_grade: "Cumulative CGPA: 7.51 / 10.0"
     start_date: "2022"
-    additional_info:
-      exam:
-        Algorithms: "A"
-        Linear Algebra: "A"
-        Database Systems: "A"
-        Operating Systems: "A-"
-        Web Development: "A"
+    year_of_completion: "2026"
+    dates: "2022 - 2026"
+    secondary_education:
+      - "12th (HSC): 82.33% | Maharashtra Board (2022)"
+      - "10th (SSC): 88.00% | Maharashtra Board (2020)"
 
 experience_details:
-  - position: "X"
-    company: "Y."
-    employment_period: "06/2019 - Present"
-    location: "San Francisco, CA"
-    industry: "Technology"
+  - position: "Java Developer Intern"
+    company: "CWIPedia Technologies"
+    employment_period: "Jan 2025 - Feb 2025"
+    dates: "Jan 2025 - Feb 2025"
+    location: "Pune, India"
+    industry: "Software Engineering"
     key_responsibilities:
-      - responsibility: "Developed web applications using React and Node.js"
-      - responsibility: "Collaborated with cross-functional teams to design and implement new features"
-      - responsibility: "Troubleshot and resolved complex software issues"
-    skills_acquired:
-      - "React"
-      - "Node.js"
-      - "Software Troubleshooting"
-  - position: "Software Developer"
-    company: "Innovatech"
-    employment_period: "06/2015 - 12/2017"
-    location: "Milan, Italy"
-    industry: "Technology"
-    key_responsibilities:
-      - responsibility: "Developed and maintained web applications using modern technologies"
-      - responsibility: "Collaborated with UX/UI designers to enhance user experience"
-      - responsibility: "Implemented automated testing procedures to ensure code quality"
-    skills_acquired:
-      - "Web development"
-      - "User experience design"
-      - "Automated testing"
-  - position: "Junior Developer"
-    company: "StartUp Hub"
-    employment_period: "01/2014 - 05/2015"
-    location: "Florence, Italy"
-    industry: "Startups"
-    key_responsibilities:
-      - responsibility: "Assisted in the development of mobile applications and web platforms"
-      - responsibility: "Participated in code reviews and contributed to software design discussions"
-      - responsibility: "Resolved bugs and implemented feature enhancements"
-    skills_acquired:
-      - "Mobile app development"
-      - "Code reviews"
-      - "Bug fixing"
+      - responsibility_1: "Engineered modular backend services using Java, SQL, JDBC, and REST APIs, improving code reusability by 30%."
+      - responsibility_2: "Optimized database query pipelines and API payloads using Data Structures & Algorithms, reducing latency by 20%."
+      - responsibility_3: "Developed responsive user interfaces with HTML5, CSS3, and JavaScript, accelerating page rendering speed by 25%."
+      - responsibility_4: "Participated in daily Agile/Scrum stand-ups, delivering verified feature modules within 2-week sprint cycles."
+
 projects:
-  - name: "X"
-    description: "Y blah blah blah "
-    link: "https://github.com/haveagoodday"
+  - name: "SmartApply: AI-Driven Job Automation Pipeline"
+    tech_stack: "Python, AsyncIO, DeepSeek API, Pandas"
+    link: "github.com/kaustubhkale12"
+    description_bullets:
+      - "Engineered an asynchronous job extraction pipeline scraping 2,000+ live postings daily across multiple portals."
+      - "Implemented DeepSeek LLM scoring and JSON schema validation, ranking listings by relevance with >80% cost reduction."
+      - "Built dynamic resume rendering with automated keyword tailoring, persisting applicant telemetry in SQLite/Pandas."
+    description: "Engineered an asynchronous job extraction pipeline scraping 2,000+ live postings daily across multiple portals. Implemented DeepSeek LLM scoring and JSON schema validation, ranking listings by relevance with >80% cost reduction. Built dynamic resume rendering with automated keyword tailoring, persisting applicant telemetry in SQLite/Pandas."
 
+  - name: "CampFlow: Hospitality Automation & Booking Suite"
+    tech_stack: "React, Node.js, Express, MongoDB"
+    link: "github.com/kaustubhkale12"
+    description_bullets:
+      - "Built a multi-tenant booking and management portal adopted by 5+ commercial business owners to eliminate booking overlaps."
+      - "Designed real-time analytics dashboards for Property Managers with automated reservation scheduling and push notifications."
+      - "Deployed production build on Vercel with RESTful API microservices, streamlining customer reservation workflows."
+    description: "Built a multi-tenant booking and management portal adopted by 5+ commercial business owners to eliminate booking overlaps. Designed real-time analytics dashboards for Property Managers with automated reservation scheduling and push notifications. Deployed production build on Vercel with RESTful API microservices, streamlining customer reservation workflows."
 
+  - name: "Neon-Pulse – Pattern Recognition & Logic Engine"
+    tech_stack: "Vanilla JavaScript, CSS3, HTML5"
+    link: "github.com/kaustubhkale12"
+    description_bullets:
+      - "Engineered an algorithmic pattern engine with recursive sequence logic managing 20+ scaling difficulty tiers."
+      - "Optimized browser DOM rendering and state validation arrays, achieving a zero-lag interactive response cycle."
+    description: "Engineered an algorithmic pattern engine with recursive sequence logic managing 20+ scaling difficulty tiers. Optimized browser DOM rendering and state validation arrays, achieving a zero-lag interactive response cycle."
 
 achievements:
-  - name: "Employee of the Month"
-    description: "Recognized for exceptional performance and contributions to the team."
-  - name: "Hackathon Winner"
-    description: "Won first place in a national hackathon competition."
+  - name: "Lead NSS Coordinator"
+    description: "Directed campus socio-educational initiatives leading 50+ student volunteers."
+  - name: "Repository Discipline"
+    description: "Maintained 100% clean Git branch histories with 0 merge conflicts across team releases."
 
 certifications:
-  - name: "Certified Scrum Master"
-    description: "Recognized certification for proficiency in Agile methodologies and Scrum framework."
-  - name: "AWS Certified Solutions Architect"
-    description: "Certification demonstrating expertise in designing, deploying, and managing applications on AWS."
+  - name: "Microsoft Azure Fundamentals (AZ-900)"
+    description: "Foundational cloud architecture, compute services, and enterprise security."
+  - name: "Google Cybersecurity Certificate"
+    description: "Comprehensive enterprise security controls, network protection, and defense protocols."
+
+skills:
+  # --- Core Languages ---
+  - "Java"
+  - "Python"
+  - "SQL"
+  - "C# (Basics via Azure)"
+  - "JavaScript"
+  - "TypeScript"
+  - "HTML"
+  - "CSS"
+
+  # --- Frameworks & Libraries ---
+  - "React"
+  - "Next.js"
+  - "Node.js"
+  - "Spring Core (Basics)"
+  - "JDBC"
+  - "REST APIs"
+  - "JSON"
+  - "MVC Architecture"
+  - "Pandas"
+  - "Asyncio"
+  - "Jinja2"
+  - "BeautifulSoup"
+  - "Regex"
+
+  # --- Testing Tools ---
+  - "JUnit (Unit Testing)"
+  - "Postman (API Testing)"
+  - "Selenium (Basic UI Automation)"
+  - "pytest (Python Testing)"
+  - "Manual Testing Fundamentals"
+  - "Test Case Design"
+
+  # --- Data & Algorithms ---
+  - "Data Structures & Algorithms"
+  - "OOP"
+  - "DBMS"
+  - "Problem-Solving"
+
+  # --- Tools & Platforms ---
+  - "Git"
+  - "GitHub"
+  - "Microsoft Azure"
+  - "MySQL"
+  - "Postman"
+  - "VS Code"
+  - "IntelliJ IDEA"
+  - "Maven"
+  - "Spring Tool Suite (STS)"
+  - "Agile/Scrum"
 
 languages:
   - language: "English"
-    proficiency: "Fluent"
-  - language: "Spanish"
-    proficiency: "Intermediate"
-
-interests:
-  - "Machine Learning"
-  - "Cybersecurity"
-  - "Open Source Projects"
-  - "Digital Marketing"
-  - "Entrepreneurship"
-
-availability:
-  notice_period: "2 weeks"
-
-salary_expectations:
-  salary_range_usd: "90000 - 110000"
-
-self_identification:
-  gender: "Female"
-  pronouns: "She/Her"
-  veteran: "No"
-  disability: "No"
-  ethnicity: "Asian"
-
-legal_authorization:
-  eu_work_authorization: "Yes"
-  us_work_authorization: "Yes"
-  requires_us_visa: "No"
-  requires_us_sponsorship: "Yes"
-  requires_eu_visa: "No"
-  legally_allowed_to_work_in_eu: "Yes"
-  legally_allowed_to_work_in_us: "Yes"
-  requires_eu_sponsorship: "No"
-  canada_work_authorization: "Yes"
-  requires_canada_visa: "No"
-  legally_allowed_to_work_in_canada: "Yes"
-  requires_canada_sponsorship: "No"
-  uk_work_authorization: "Yes"
-  requires_uk_visa: "No"
-  legally_allowed_to_work_in_uk: "Yes"
-  requires_uk_sponsorship: "No"
-
+    proficiency: "Professional"
+  - language: "Hindi"
+    proficiency: "Native"
+  - language: "Marathi"
+    proficiency: "Native"
 
 work_preferences:
   remote_work: "Yes"
   in_person_work: "Yes"
   open_to_relocation: "Yes"
-  willing_to_complete_assessments: "Yes"
-  willing_to_undergo_drug_tests: "Yes"
-  willing_to_undergo_background_checks: "Yes"
+
+target_roles:
+  - "Java Developer"
+  - "Automation Tester / QA Automation"
+  - ".NET Developer"
+  - "Software Engineer"
+  - "Backend Developer"
+  - "Full Stack Developer"
+  - "Software Tester"

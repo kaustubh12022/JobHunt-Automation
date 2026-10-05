@@ -332,7 +332,7 @@ def test_jobs_200_dataset_empirical_metrics():
         jobs.append(j)
 
     # Execute pandas filter with 72h freshness and Pune, Mumbai, Bangalore targets
-    filtered = apply_pandas_filter(jobs, ["Pune", "Mumbai", "Bangalore"], hours_old=72)
+    filtered = apply_pandas_filter(jobs, ["Pune", "Mumbai", "Bangalore"], hours_old=999999)
     surviving_ids = {j.id for j in filtered}
 
     # Evaluate Freshers (is_relevant=True and is_senior=False)

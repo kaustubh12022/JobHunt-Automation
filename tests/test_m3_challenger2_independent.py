@@ -341,7 +341,8 @@ def test_adversarial_score_coercion_and_threshold_resilience(raw_json_str, expec
 
     with patch("src.scorer.call_ai_scoring_async", side_effect=mock_ai), \
          patch("src.db.get_cached_jd_score", return_value=None), \
-         patch("src.db.save_jd_cache", return_value=None):
+         patch("src.db.save_jd_cache", return_value=None), \
+         patch("src.config_loader.load_config", return_value={"scoring": {"minimum_score": 60}}):
         scored = score_jobs([job])
 
     if should_pass:

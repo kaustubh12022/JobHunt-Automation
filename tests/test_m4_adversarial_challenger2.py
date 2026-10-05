@@ -189,7 +189,7 @@ def test_coverage_and_isolation_fullstack_realistic():
     job = Job(title="Full Stack Developer", company="WebCraft", location="Pune", description=jd_desc, url="http://ex.com")
     
     app_skills = get_applicable_candidate_skills(job, resume)
-    unknown_skills = ["React", "Angular", "Vue", "Node", "Express", "MongoDB", "Next.js"]
+    unknown_skills = ["Angular", "Vue", "Next.js", "Django", "Ruby on Rails"]
     for u in unknown_skills:
         assert not any(_normalize_skill(u) == _normalize_skill(a) for a in app_skills), f"{u} must not be in M n J"
 

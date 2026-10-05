@@ -116,7 +116,7 @@ def test_real_world_dataset_4_role_lenses(tmp_path, master_resume, jobs_dataset)
         extracted_text = reader.pages[0].extract_text()
         assert "PROFILE SUMMARY" in extracted_text
         assert "TECHNICAL SKILLS" in extracted_text
-        assert "TECHNICAL PROJECTS" in extracted_text
+        assert "PROJECTS" in extracted_text
         assert "WORK EXPERIENCE" in extracted_text
         assert "EDUCATION" in extracted_text
         assert "CERTIFICATIONS" in extracted_text
@@ -366,7 +366,7 @@ def test_generate_resume_pdf_with_none_job(tmp_path, master_resume):
     assert len(reader.pages) == 1, "Expected exactly 1 page when job=None"
 
     extracted = reader.pages[0].extract_text()
-    pos_proj = extracted.find("TECHNICAL PROJECTS")
+    pos_proj = extracted.find("PROJECTS")
     pos_exp = extracted.find("WORK EXPERIENCE")
     assert pos_proj != -1 and pos_exp != -1
     assert pos_proj < pos_exp, "Default when job=None should place PROJECTS before EXPERIENCE"

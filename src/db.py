@@ -45,37 +45,11 @@ def save_jd_cache(url: str, score: int, missing_skills: list, extracted_requirem
         logger.warning(f"Failed to save to jd_cache in Supabase: {e}")
 
 def cleanup_old_pdfs():
-    """Automatically deletes PDFs older than 30 days if status is generated, rejected, or custom."""
-    if not supabase: return
-    try:
-        thirty_days_ago = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
-        
-        # Query applications older than 30 days
-        apps_res = supabase.table("applications").select("job_id").in_("status", ["generated", "rejected", "custom"]).lt("created_at", thirty_days_ago).execute()
-        job_ids = [app["job_id"] for app in apps_res.data]
-        
-        if not job_ids:
-            return
-            
-        jobs_res = supabase.table("tracked_jobs").select("id, pdf_filename").in_("id", job_ids).execute()
-        files_to_remove = []
-        for job in jobs_res.data:
-            pdf_url = job.get("pdf_filename")
-            if pdf_url and "resumes/" in pdf_url:
-                # Extract filename from url
-                filename = pdf_url.split("resumes/")[-1]
-                files_to_remove.append(filename)
-                
-        if files_to_remove:
-            supabase.storage.from_("resumes").remove(files_to_remove)
-            
-        # NULL the pdf_filename in the database
-        for job in jobs_res.data:
-            supabase.table("tracked_jobs").update({"pdf_filename": None}).eq("id", job["id"]).execute()
-            
-        logger.info(f"🧹 Cleaned up {len(files_to_remove)} old PDFs from Supabase Storage.")
-    except Exception as e:
-        logger.error(f"Error during PDF cleanup: {e}")
+    """Auto-cleanup is permanently disabled.
+    All resumes and PDF files in Supabase Storage are preserved indefinitely.
+    """
+    logger.debug("cleanup_old_pdfs: Auto-cleanup is disabled. Resumes are retained indefinitely.")
+    return
 
 def save_pipeline_results(pipeline_state, shortlisted_jobs, pdf_paths, all_scored_jobs=None):
     """Push pipeline results to Supabase with comprehensive token and cost telemetry across all scored jobs."""
@@ -174,20 +148,22 @@ def save_pipeline_results(pipeline_state, shortlisted_jobs, pdf_paths, all_score
 
     # 2. Insert each shortlisted job + auto-create application
     for job, pdf_path in zip(shortlisted_jobs, pdf_paths):
-        stored_pdf_url = pdf_path
+        stored_pdf_url = ""
         
-        # Upload to Supabase Storage if pdf exists
-        if pdf_path and os.path.exists(pdf_path):
+        # Upload to Supabase Storage if pdf exists and is company_site
+        apply_type = (getattr(job, "apply_type", None) or "easy_apply").lower()
+        if apply_type == "company_site" and pdf_path and os.path.exists(pdf_path):
             filename = Path(pdf_path).name
+            platform = (getattr(job, "source", None) or "general").lower().replace("workday-", "")
+            storage_path = f"{platform}/{apply_type}/{filename}"
             try:
                 with open(pdf_path, 'rb') as f:
-                    supabase.storage.from_("resumes").upload(filename, f.read())
-                # Get public url
-                public_url = supabase.storage.from_("resumes").get_public_url(filename)
-                # stored_pdf_url = public_url # Keep local path to avoid 504 Gateway Timeouts
+                    supabase.storage.from_("resumes").upload(storage_path, f.read(), file_options={"upsert": "true"})
+                public_url = supabase.storage.from_("resumes").get_public_url(storage_path)
+                stored_pdf_url = public_url
             except Exception as e:
-                logger.error(f"Failed to upload {filename} to Supabase: {e}")
-                # Fallback to local path if upload fails
+                logger.error(f"Failed to upload {storage_path} to Supabase: {e}")
+                stored_pdf_url = ""
         
         try:
             job_record = supabase.table("tracked_jobs").insert({
@@ -215,8 +191,7 @@ def save_pipeline_results(pipeline_state, shortlisted_jobs, pdf_paths, all_score
             }).execute()
         except Exception as e:
             logger.error(f"Failed to record job {getattr(job, 'id', '')} in Supabase: {e}")
-        
-    # Trigger cleanup
+    # Auto-cleanup is permanently disabled (all resumes preserved indefinitely)
     try:
         cleanup_old_pdfs()
     except Exception as e:

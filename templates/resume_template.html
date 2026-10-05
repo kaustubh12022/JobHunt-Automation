@@ -11,81 +11,88 @@
         }
         * {
             box-sizing: border-box;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
         body {
-            font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: Arial, "Helvetica Neue", Helvetica, "Inter", sans-serif;
             color: #0f172a;
             margin: 0;
-            padding: 0.32in 0.45in;
+            padding: 0.32in 0.42in;
             background-color: #ffffff;
-            font-size: 9.5pt;
-            line-height: 1.34;
+            font-size: 8.8pt;
+            line-height: 1.28;
             -webkit-font-smoothing: antialiased;
         }
 
         /* Header */
         header {
             text-align: center;
-            margin-bottom: 8px;
+            margin-bottom: 7px;
         }
         h1 {
-            font-size: 19pt;
+            font-size: 18pt;
             font-weight: 700;
-            color: #1e40af; /* Subtle royal blue accent */
+            color: #1e3a8a; /* Deep ATS-safe navy blue */
             margin: 0 0 3px 0;
             letter-spacing: -0.2px;
         }
         .contact {
-            font-size: 9pt;
-            color: #475569;
+            font-size: 8.8pt;
+            color: #334155;
             margin: 0;
             line-height: 1.3;
         }
         .contact a {
-            color: #1e40af;
+            color: #1e3a8a;
             text-decoration: none;
-        }
-        .contact a:hover {
-            text-decoration: underline;
         }
 
         /* Section Headings */
         .section {
-            margin-top: 12px;
+            margin-top: 8px;
             margin-bottom: 2px;
         }
         h2 {
-            font-size: 10.5pt;
+            font-size: 10pt;
             font-weight: 700;
-            color: #1e40af; /* Royal blue accent heading */
+            color: #1e3a8a;
             text-transform: uppercase;
-            letter-spacing: 0.4px;
-            border-bottom: 1.2px solid #1e40af;
+            letter-spacing: 0.5px;
+            border-bottom: 1.2px solid #1e3a8a;
             padding-bottom: 2px;
             margin: 0 0 4px 0;
         }
 
         /* Profile Summary */
         .summary {
-            font-size: 9.2pt;
+            font-size: 8.8pt;
             color: #1e293b;
             text-align: justify;
             margin: 0;
-            line-height: 1.34;
+            line-height: 1.3;
         }
 
         /* Technical Skills */
-        .skills-content {
-            font-size: 9.2pt;
+        .skills-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8.8pt;
             color: #1e293b;
-            line-height: 1.34;
-            margin: 0;
+            line-height: 1.3;
         }
-        .skills-content strong {
+        .skills-table td {
+            padding: 1px 0;
+            vertical-align: top;
+        }
+        .skills-table td.skill-label {
+            font-weight: 700;
             color: #0f172a;
+            width: 135px;
+            white-space: nowrap;
         }
 
-        /* Item Containers (Experience, Projects, Education) */
+        /* Item Tables for guaranteed horizontal stream separation */
         .item {
             margin-bottom: 5px;
             page-break-inside: avoid;
@@ -94,65 +101,64 @@
             margin-bottom: 0;
         }
         
-        .item-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
+        .item-table {
             width: 100%;
+            border-collapse: collapse;
             margin-bottom: 1px;
         }
+        .item-table td {
+            padding: 0;
+            vertical-align: baseline;
+        }
         .item-left {
-            flex: 1 1 auto;
-            min-width: 0;
             text-align: left;
         }
         .item-right {
-            flex: 0 0 auto;
             text-align: right;
             white-space: nowrap;
-            margin-left: 8px;
+            color: #475569;
+            font-size: 8.5pt;
         }
         
         .item-title {
             font-weight: 700;
-            font-size: 9.8pt;
+            font-size: 9.2pt;
             color: #0f172a;
         }
         .item-company {
             font-weight: 600;
             color: #1e293b;
-            font-size: 9.2pt;
+            font-size: 9pt;
         }
         .item-subtitle {
             font-weight: 500;
             color: #334155;
-            font-size: 9.2pt;
+            font-size: 8.8pt;
         }
         .item-tech {
             font-weight: 500;
             color: #475569;
-            font-size: 8.8pt;
+            font-size: 8.5pt;
         }
         .item-date, .item-location {
-            font-size: 8.8pt;
+            font-size: 8.5pt;
             color: #475569;
-            font-variant-numeric: tabular-nums;
         }
-        .item-date a {
-            color: #1e40af;
+        .item-right a {
+            color: #1e3a8a;
             text-decoration: none;
         }
 
         /* Bullet lists */
         ul {
             margin: 2px 0 0 0;
-            padding-left: 15px;
+            padding-left: 14px;
             list-style-type: disc;
         }
         li {
-            font-size: 9pt;
+            font-size: 8.7pt;
             color: #1e293b;
-            line-height: 1.32;
+            line-height: 1.28;
             margin-bottom: 2px;
             text-align: justify;
         }
@@ -162,38 +168,26 @@
         li strong {
             color: #0f172a;
         }
-        .cert-list li {
+        .compact-list li {
             margin-bottom: 1.5px;
         }
     </style>
 </head>
 <body>
 
+    <!-- 1. HEADER (Mandatory Location, Phone with Country Code, Clean Links) -->
     <header>
         <h1>{{ resume.personal_information.name }} {{ resume.personal_information.surname }}</h1>
         <div class="contact">
-            {% set contact_items = [] %}
-            {% if resume.personal_information.phone %}
-                {% set phone_str = (resume.personal_information.phone_prefix ~ ' ' if resume.personal_information.phone_prefix and not resume.personal_information.phone.startswith('+') else '') ~ resume.personal_information.phone %}
-                {% set _ = contact_items.append(phone_str) %}
-            {% endif %}
-            {% if resume.personal_information.email %}
-                {% set _ = contact_items.append('<a href="mailto:' ~ resume.personal_information.email ~ '">' ~ resume.personal_information.email ~ '</a>') %}
-            {% endif %}
-            {% if resume.personal_information.linkedin %}
-                {% set _ = contact_items.append('<a href="https://' ~ resume.personal_information.linkedin | replace('https://', '') ~ '">' ~ resume.personal_information.linkedin | replace('https://', '') | replace('www.', '') ~ '</a>') %}
-            {% endif %}
-            {% if resume.personal_information.github %}
-                {% set _ = contact_items.append('<a href="' ~ resume.personal_information.github ~ '">GitHub</a>') %}
-            {% endif %}
-            {% if resume.personal_information.city or resume.personal_information.address %}
-                {% set loc = resume.personal_information.city ~ (', ' ~ resume.personal_information.country if resume.personal_information.country else '') if resume.personal_information.city else resume.personal_information.address %}
-                {% set _ = contact_items.append(loc) %}
-            {% endif %}
-            {{ contact_items | join(' | ') | safe }}
+            Pune, Maharashtra, India &nbsp;|&nbsp;
+            +91-9975526627 &nbsp;|&nbsp;
+            <a href="mailto:{{ resume.personal_information.email }}">{{ resume.personal_information.email }}</a> &nbsp;|&nbsp;
+            <a href="https://linkedin.com/in/kaustubhkale12">linkedin.com/in/kaustubhkale12</a> &nbsp;|&nbsp;
+            <a href="https://github.com/kaustubhkale12">github.com/kaustubhkale12</a>
         </div>
     </header>
 
+    <!-- 2. PROFILE SUMMARY -->
     {% if resume.profile_summary or resume.professional_summary %}
     <div class="section">
         <h2>PROFILE SUMMARY</h2>
@@ -203,30 +197,114 @@
     </div>
     {% endif %}
 
-    {% if resume.skills %}
+    <!-- 3. EDUCATION (SKNSITS + Cumulative CGPA + Structured 10th & 12th) -->
     <div class="section">
-        <h2>TECHNICAL SKILLS</h2>
-        <div class="skills-content">
-            <strong>Technical &amp; Tools:</strong> {{ resume.skills | join(', ') }}
+        <h2>EDUCATION</h2>
+        <div class="item">
+            <table class="item-table">
+                <tr>
+                    <td class="item-left">
+                        <span class="item-title">SKNSITS, Lonavala (Savitribai Phule Pune University)</span>
+                    </td>
+                    <td class="item-right">
+                        Pune, India
+                    </td>
+                </tr>
+                <tr>
+                    <td class="item-left">
+                        <span class="item-subtitle">Bachelor of Engineering in Information Technology</span>
+                    </td>
+                    <td class="item-right">
+                        2022 - 2026
+                    </td>
+                </tr>
+                <tr>
+                    <td class="item-left" colspan="2" style="padding-top: 1px; font-size: 8.6pt; color: #1e293b;">
+                        <strong>Cumulative CGPA: 7.51 / 10.0 (7.51 CGPA)</strong>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="item" style="margin-top: 2px;">
+            <table class="item-table" style="font-size: 8.5pt; color: #334155;">
+                <tr>
+                    <td class="item-left">
+                        &bull; Higher Secondary Certificate (12th / HSC) &nbsp;|&nbsp; Maharashtra State Board &nbsp;|&nbsp; 2022 &nbsp;|&nbsp; <strong>82.33%</strong>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="item-left">
+                        &bull; Secondary School Certificate (10th / SSC) &nbsp;|&nbsp; Maharashtra State Board &nbsp;|&nbsp; 2020 &nbsp;|&nbsp; <strong>88.00%</strong>
+                    </td>
+                </tr>
+            </table>
         </div>
     </div>
-    {% endif %}
 
-    {# Macro for Experience block #}
+    <!-- 4. TECHNICAL SKILLS (Categorized Structure) -->
+    <div class="section">
+        <h2>TECHNICAL SKILLS</h2>
+        <table class="skills-table">
+            <tr>
+                <td class="skill-label">Technical Skills:</td>
+                <td>
+                    {% if resume.skills_structured and resume.skills_structured.technical %}
+                        {{ resume.skills_structured.technical | join(', ') }}
+                    {% elif resume.skills %}
+                        {% set tech_keywords = ['Java', 'Python', 'SQL', 'C#', 'REST APIs', 'Spring Core', 'DSA', 'Data Structures & Algorithms', 'OOP', 'DBMS', 'HTML', 'CSS', 'JavaScript', 'TypeScript', 'JDBC', 'MVC Architecture', 'Pandas', 'Asyncio'] %}
+                        {% set matched_tech = [] %}
+                        {% set matched_tools = [] %}
+                        {% for s in resume.skills %}
+                            {% set s_clean = s.split('(')[0].strip() %}
+                            {% if s_clean in ['Git', 'GitHub', 'Microsoft Azure', 'Azure', 'MySQL', 'Postman', 'VS Code', 'IntelliJ IDEA', 'IntelliJ', 'Maven', 'Agile/Scrum', 'Windows Task Scheduler', 'Excel'] %}
+                                {% set _ = matched_tools.append(s) %}
+                            {% else %}
+                                {% set _ = matched_tech.append(s) %}
+                            {% endif %}
+                        {% endfor %}
+                        {{ matched_tech | join(', ') }}
+                    {% else %}
+                        Java, Python, SQL, REST APIs, Data Structures &amp; Algorithms, OOP, DBMS, Spring Core, JavaScript, TypeScript, HTML, CSS
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td class="skill-label">Tools &amp; Cloud:</td>
+                <td>
+                    {% if resume.skills_structured and resume.skills_structured.tools_and_cloud %}
+                        {{ resume.skills_structured.tools_and_cloud | join(', ') }}
+                    {% elif matched_tools %}
+                        {{ matched_tools | join(', ') }}
+                    {% else %}
+                        Git, GitHub, Microsoft Azure, MySQL, Postman, VS Code, IntelliJ IDEA, Maven, Agile/Scrum
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- 5. WORK EXPERIENCE (Vertical Hierarchy & Clean Separation) -->
     {% macro render_experience() %}
         {% if resume.experience_details %}
         <div class="section">
             <h2>WORK EXPERIENCE</h2>
             {% for exp in resume.experience_details %}
             <div class="item">
-                <div class="item-row">
-                    <div class="item-left">
-                        <span class="item-title">{{ exp.position }}</span> &ndash; <span class="item-company">{{ exp.company }}</span>{% if exp.location %}, <span class="item-location">{{ exp.location }}</span>{% endif %}
-                    </div>
-                    <div class="item-right item-date">
-                        {{ exp.employment_period or (exp.date_from ~ ' - ' ~ (exp.date_to if exp.date_to else 'Present')) }}
-                    </div>
-                </div>
+                <table class="item-table">
+                    <tr>
+                        <td class="item-left" colspan="2">
+                            <span class="item-title">{{ exp.company }}</span>{% if exp.location %}, <span class="item-location">{{ exp.location }}</span>{% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="item-left" style="font-size: 8.8pt; color: #1e3a8a; font-weight: 600;">
+                            {{ exp.role or exp.position }}
+                        </td>
+                        <td class="item-right item-date">
+                            {{ exp.dates or exp.employment_period }}
+                        </td>
+                    </tr>
+                </table>
                 <ul>
                     {% for resp in exp.key_responsibilities %}
                         {% if resp is mapping %}
@@ -242,24 +320,32 @@
         {% endif %}
     {% endmacro %}
 
-    {# Macro for Projects block #}
+    <!-- 6. PROJECTS (Universal Heading 'PROJECTS', 4-Digit, Formula-Driven Bullets) -->
     {% macro render_projects() %}
         {% if resume.projects %}
         <div class="section">
-            <h2>TECHNICAL PROJECTS</h2>
-            {% for proj in resume.projects %}
+            <h2>PROJECTS</h2>
+            {% for proj in (resume.projects[:3] if resume.projects is sequence else resume.projects) %}
             <div class="item">
-                <div class="item-row">
-                    <div class="item-left">
-                        <span class="item-title">{{ proj.name }}</span>{% if proj.tech_stack %} <span class="item-tech">| {{ proj.tech_stack }}</span>{% elif proj.link and not proj.link.startswith('http') %} <span class="item-tech">| {{ proj.link }}</span>{% endif %}
-                    </div>
-                    <div class="item-right item-date">
-                        {% if proj.github %}<a href="{{ proj.github }}">GitHub</a>{% elif proj.link and proj.link.startswith('http') %}<a href="{{ proj.link }}">Link</a>{% endif %}
-                    </div>
-                </div>
+                <table class="item-table">
+                    <tr>
+                        <td class="item-left">
+                            <span class="item-title">{{ proj.title or proj.name }}</span>{% if proj.tech_tag or proj.tech_stack %} <span class="item-tech">&nbsp;|&nbsp; {{ proj.tech_tag or proj.tech_stack }}</span>{% endif %}
+                        </td>
+                        <td class="item-right item-date">
+                            {% if proj.github %}<a href="https://{{ proj.github | replace('https://', '') }}">{{ proj.github | replace('https://', '') }}</a>
+                            {% elif proj.link and proj.link.startswith('github') %}<a href="https://{{ proj.link }}">{{ proj.link }}</a>
+                            {% elif proj.link and proj.link.startswith('http') %}<a href="{{ proj.link }}">{{ proj.link }}</a>{% endif %}
+                        </td>
+                    </tr>
+                </table>
                 <ul>
                     {% if proj.description_bullets %}
                         {% for desc in proj.description_bullets %}
+                            <li>{{ desc }}</li>
+                        {% endfor %}
+                    {% elif proj.bullets %}
+                        {% for desc in proj.bullets %}
                             <li>{{ desc }}</li>
                         {% endfor %}
                     {% elif proj.description is string %}
@@ -280,7 +366,7 @@
         {% endif %}
     {% endmacro %}
 
-    {# Dynamic Section Reordering #}
+    {# Dynamic Section Flow: Prioritize QA Internship for Testing roles, Projects for Dev roles #}
     {% if job and job.is_testing_role %}
         {{ render_experience() }}
         {{ render_projects() }}
@@ -289,30 +375,33 @@
         {{ render_experience() }}
     {% endif %}
 
-    {% if resume.education_details %}
-    <div class="section">
-        <h2>EDUCATION</h2>
-        {% for edu in resume.education_details %}
-        <div class="item">
-            <div class="item-row">
-                <div class="item-left">
-                    <span class="item-title">{{ edu.institution or edu.university }}</span> &ndash; <span class="item-subtitle">{{ edu.education_level }}{% if edu.field_of_study and edu.field_of_study not in edu.education_level %} in {{ edu.field_of_study }}{% endif %}</span>
-                </div>
-                <div class="item-right item-date">
-                    {{ edu.year_of_completion }}{% if edu.final_evaluation_grade %} | {{ edu.final_evaluation_grade }}{% endif %}
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
+    <!-- 7. CERTIFICATIONS -->
     {% if resume.certifications %}
     <div class="section">
         <h2>CERTIFICATIONS</h2>
-        <ul class="cert-list">
+        <ul class="compact-list">
             {% for cert in resume.certifications %}
-            <li><strong>{{ cert.name }}</strong>{% if cert.description %} &ndash; {{ cert.description }}{% endif %}</li>
+            {% if cert is mapping %}
+                <li><strong>{{ cert.name }}</strong>{% if cert.description %} &ndash; {{ cert.description }}{% endif %}</li>
+            {% else %}
+                <li><strong>{{ cert }}</strong></li>
+            {% endif %}
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- 8. ACHIEVEMENTS -->
+    {% if resume.achievements %}
+    <div class="section">
+        <h2>ACHIEVEMENTS</h2>
+        <ul class="compact-list">
+            {% for ach in resume.achievements %}
+            {% if ach is mapping %}
+                <li><strong>{{ ach.name }}</strong>: {{ ach.description }}</li>
+            {% else %}
+                <li>{{ ach }}</li>
+            {% endif %}
             {% endfor %}
         </ul>
     </div>

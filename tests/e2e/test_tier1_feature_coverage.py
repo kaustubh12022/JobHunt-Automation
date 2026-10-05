@@ -104,7 +104,7 @@ def test_f2_1_test_mode_config_defaults():
     assert tm.get("score_top_n") == 3
     assert tm.get("tailor_top_n") == 1
     assert "Pune" in tm.get("locations", [])
-    assert "QA Automation" in tm.get("search_terms", [])
+    assert "Junior Java Developer" in tm.get("search_terms", [])
 
 
 def test_f2_2_test_mode_limits_query_combinations():
