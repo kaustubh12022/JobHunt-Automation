@@ -24,7 +24,11 @@ def load_config() -> dict:
     return config
 
 def load_resume() -> dict:
-    """Load master resume from data_folder/plain_text_resume.yaml."""
-    resume_path = Path(__file__).parent.parent / "data_folder" / "plain_text_resume.yaml"
+    """Load master resume from Desktop if available, else data_folder/plain_text_resume.yaml."""
+    desktop_resume = Path(os.environ.get("USERPROFILE", "C:/Users/kalek")) / "Desktop" / "plain_text_resume.yaml"
+    if desktop_resume.exists():
+        resume_path = desktop_resume
+    else:
+        resume_path = Path(__file__).parent.parent / "data_folder" / "plain_text_resume.yaml"
     with open(resume_path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)

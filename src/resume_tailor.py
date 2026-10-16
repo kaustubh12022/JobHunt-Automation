@@ -254,6 +254,9 @@ def is_valid_candidate_skill(skill: str, master_resume: dict, selected_skills: l
             return True, canonical
 
     for canonical_name, aliases in MASTER_SKILL_ALIASES.items():
+        norm_canonical = _normalize_skill(canonical_name)
+        if norm_canonical not in raw_lookup and not any(norm_canonical in r for r in raw_lookup):
+            continue
         for alias in aliases:
             if norm == _normalize_skill(alias):
                 display = canonical_name.title()
@@ -538,7 +541,7 @@ def validate_and_sanitize_tailored(
     tailored["experience_details"] = [sanitized_exp]
 
     # ── 3. Skills Sanitization & Zero-Hallucination Pruning ──
-    raw_skills = tailored.get("skills", [])
+    raw_skills = tailored.get("skills") or tailored.get("tailored_skills") or []
     sanitized_skills = []
     seen_skills = set()
 
@@ -557,12 +560,15 @@ def validate_and_sanitize_tailored(
 
     if not sanitized_skills:
         fallback_role_skills = {
-            "qa": ["Selenium", "Postman", "pytest", "JUnit", "Manual Testing Fundamentals", "Test Case Design", "Python", "Java", "SQL", "Git"],
-            "java": ["Java", "Spring Core", "JDBC", "SQL", "REST APIs", "OOP", "Data Structures & Algorithms", "MySQL", "Maven", "Git"],
-            "dotnet": ["C#", "SQL", "REST APIs", "Azure", "OOP", "DBMS", "Git", "JSON", "Agile/Scrum"],
-            "fullstack": ["JavaScript", "Python", "HTML", "CSS", "REST APIs", "SQL", "Git", "Pandas", "Asyncio", "OOP"]
+            "qa": ["Postman", "Python", "SQL", "REST APIs", "Java", "Git", "Agile/Scrum", "Problem-Solving"],
+            "java": ["Java", "Spring Boot", "Spring Core", "JDBC", "SQL", "REST APIs", "OOP", "Data Structures & Algorithms", "MySQL", "Maven", "Git"],
+            "dotnet": ["SQL", "REST APIs", "Azure", "OOP", "DBMS", "Git", "JSON", "Agile/Scrum", "Java"],
+            "fullstack": ["React", "JavaScript", "TypeScript", "Python", "HTML", "CSS", "REST APIs", "SQL", "Git", "Node.js", "MongoDB"]
         }
-        sanitized_skills = list(fallback_role_skills.get(normalized_lens, fallback_role_skills["fullstack"]))
+        raw_fallbacks = fallback_role_skills.get(normalized_lens, fallback_role_skills["fullstack"])
+        sanitized_skills = [s for s in raw_fallbacks if is_valid_candidate_skill(s, master_resume)[0]]
+        if not sanitized_skills:
+            sanitized_skills = list(master_resume.get("skills", []))[:10]
         for s in sanitized_skills:
             seen_skills.add(_normalize_skill(s))
 
@@ -784,6 +790,22 @@ async def tailor_resume_async(job: Job, selected_skills: list[str] = None, stop_
 
         tok_count = getattr(tokens, 'total_tokens', None) or (tokens.get('total_tokens') if isinstance(tokens, dict) else tokens) or 0
         job.tokens_used = getattr(job, 'tokens_used', 0) + int(tok_count)
+
+        if isinstance(tokens, dict):
+            cost_val = float(tokens.get("cost_usd", 0.0) or 0.0)
+            job.cost_usd = getattr(job, 'cost_usd', 0.0) + cost_val
+
+            # Merge detailed token telemetry across scoring and tailoring
+            current_usage = getattr(job, 'token_usage', None)
+            if not current_usage:
+                job.token_usage = dict(tokens)
+            else:
+                for k in ['prompt_tokens', 'prompt_cache_hit_tokens', 'prompt_cache_miss_tokens', 'completion_tokens', 'reasoning_tokens']:
+                    if k in tokens:
+                        current_usage[k] = current_usage.get(k, 0) + (tokens.get(k, 0) or 0)
+                current_usage['total_tokens'] = job.tokens_used
+                current_usage['cost_usd'] = job.cost_usd
+                job.token_usage = current_usage
 
         # Robust Markdown stripping & brace extraction
         cleaned_text = response_text.strip()

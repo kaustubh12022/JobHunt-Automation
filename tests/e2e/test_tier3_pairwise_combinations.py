@@ -192,8 +192,8 @@ def test_tier3_f5_f7_scored_jobs_feed_into_role_lens_tailoring():
 def test_tier3_f7_f8_role_lens_tailored_resume_passes_zero_hallucination(master_resume, zero_hallucination_validator):
     """Pairwise F7 x F8: Tailored resume delta outputs for QA and Java lenses pass zero-hallucination validation."""
     qa_delta = {
-        "profile_summary": "Results-driven IT engineer skilled in Python, Selenium, Postman, and automated QA pipelines.",
-        "tailored_skills": ["Python", "Selenium", "Postman", "SQL", "Git", "Java"]
+        "profile_summary": "Results-driven IT engineer skilled in Python, FastAPI, Postman, and automated pipelines.",
+        "tailored_skills": ["Python", "FastAPI", "Postman", "SQL", "Git", "Java"]
     }
     tailored_qa = json.loads(json.dumps(master_resume))
     tailored_qa["profile_summary"] = qa_delta["profile_summary"]
@@ -333,11 +333,11 @@ def test_tier3_f4_f8_all_200_jobs_fresher_vs_senior_pipeline_integrity(jobs_200_
         # Tailored resume has only valid skills
         tailored = json.loads(json.dumps(master_resume))
         if target_role == "qa":
-            tailored["skills"] = ["Python", "Selenium", "Postman", "SQL", "Git"]; tailored.pop("skills_structured", None)
+            tailored["skills"] = ["Python", "FastAPI", "Postman", "SQL", "Git"]; tailored.pop("skills_structured", None)
         elif target_role == "java":
             tailored["skills"] = ["Java", "Spring Core", "SQL", "REST APIs", "Git"]
         elif target_role == "dotnet":
-            tailored["skills"] = ["C# (Basics via Azure)", "SQL", "REST APIs", "Git"]
+            tailored["skills"] = ["SQL", "REST APIs", "Git", "Java"]
         else:
             tailored["skills"] = ["JavaScript", "HTML", "CSS", "Python", "SQL"]
 

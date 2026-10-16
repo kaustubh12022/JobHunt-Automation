@@ -13,6 +13,7 @@ import ssl
 import pandas as pd
 from src.logger import logger
 from src.models import Job
+from src.config_loader import load_config
 
 _SSL_CTX = ssl.create_default_context()
 _SSL_CTX.check_hostname = False
@@ -27,7 +28,14 @@ def clean_term_for_slug(term: str) -> str:
     slug = re.sub(r'[^a-zA-Z0-9\s]', '', term).strip().lower()
     return re.sub(r'\s+', '-', slug)
 
-def parse_naukri_markdown(md_text: str, default_loc: str = "India", job_type: str = "fulltime", hours_old: int = 48) -> list[Job]:
+def parse_experience_from_url(url: str) -> tuple[int, int] | None:
+    """Extract (min_exp, max_exp) from Naukri URL slug like '6-to-11-years'."""
+    m = re.search(r'(\d+)-to-(\d+)-years?', url)
+    if m:
+        return int(m.group(1)), int(m.group(2))
+    return None
+
+def parse_naukri_markdown(md_text: str, default_loc: str = "India", job_type: str = "fulltime", hours_old: int = 48, max_experience_years: int = 0) -> list[Job]:
     """
     Parse Jina-rendered Naukri markdown into structured Job objects.
     Enforces freshness cutoff at parser level so stale jobs never enter pipeline.
@@ -63,12 +71,33 @@ def parse_naukri_markdown(md_text: str, default_loc: str = "India", job_type: st
         # Format usually: "0-1 Yrs Pune, Mumbai" or "0-2 Yrs Bengaluru"
         exp_loc_match = re.search(r'(?P<exp>\d+(?:-\d+)?\s+Yrs?)\s+(?P<loc>[^\n\r]+)', body)
         location = default_loc
+        
+        min_exp, max_exp = None, None
+        
         if exp_loc_match:
             loc_candidate = exp_loc_match.group("loc").strip()
             # Clean ratings or garbage if attached
             loc_candidate = re.sub(r'\[.*?\]\(.*?\)', '', loc_candidate).strip()
             if loc_candidate:
                 location = loc_candidate
+            
+            # Extract min_exp and max_exp from body text
+            exp_str = exp_loc_match.group("exp")
+            exp_nums = re.findall(r'\d+', exp_str)
+            if len(exp_nums) >= 2:
+                min_exp, max_exp = int(exp_nums[0]), int(exp_nums[1])
+            elif len(exp_nums) == 1:
+                min_exp = int(exp_nums[0])
+                
+        # URL parsing takes precedence as it's more reliable
+        url_exp = parse_experience_from_url(raw_url)
+        if url_exp:
+            min_exp, max_exp = url_exp
+            
+        # Hard filter at scraper level for non-fresher jobs
+        if min_exp is not None and min_exp > max_experience_years:
+            logger.debug(f"Dropping non-fresher Naukri job ({title}): min_exp={min_exp}")
+            continue
 
         # Extract description snippet & bulleted skills
         # Extract bullet skills: * Skill
@@ -140,7 +169,9 @@ def parse_naukri_markdown(md_text: str, default_loc: str = "India", job_type: st
             job_type=job_type,
             apply_type=apply_type,
             date_posted=posted_dt,
-            is_remote="remote" in location.lower() or "hybrid" in location.lower()
+            is_remote="remote" in location.lower() or "hybrid" in location.lower(),
+            min_experience=min_exp,
+            max_experience=max_exp
         )
         jobs.append(job_obj)
 
@@ -151,6 +182,9 @@ def scrape_naukri(search_terms: list[str], locations: list[str] = None, job_type
     Scrape Naukri fresher developer jobs using Jina AI Reader bridge.
     Applies &jobAge query parameter to ensure upstream search only fetches fresh jobs.
     """
+    config = load_config()
+    max_experience_years = config.get('search', {}).get('max_experience_years', 0)
+    
     jobs = []
     seen_urls = set()
     locations = locations or ["Pune"]
@@ -181,7 +215,7 @@ def scrape_naukri(search_terms: list[str], locations: list[str] = None, job_type
             except Exception as e:
                 logger.warning(f"Failed to fetch Naukri page via Jina ({target_url}): {e}")
 
-            parsed_jobs = parse_naukri_markdown(md_text, default_loc=loc, job_type=job_type, hours_old=hours_old) if md_text else []
+            parsed_jobs = parse_naukri_markdown(md_text, default_loc=loc, job_type=job_type, hours_old=hours_old, max_experience_years=max_experience_years) if md_text else []
             
             # Fallback 1: Try without ?experience=0 if 0 jobs found
             if not parsed_jobs:
@@ -190,7 +224,7 @@ def scrape_naukri(search_terms: list[str], locations: list[str] = None, job_type
                     req = urllib.request.Request(f"https://r.jina.ai/{fallback_url}", headers=HEADERS)
                     with urllib.request.urlopen(req, timeout=15, context=_SSL_CTX) as resp:
                         fb_text = resp.read().decode('utf-8', errors='ignore')
-                    parsed_jobs = parse_naukri_markdown(fb_text, default_loc=loc, job_type=job_type, hours_old=hours_old)
+                    parsed_jobs = parse_naukri_markdown(fb_text, default_loc=loc, job_type=job_type, hours_old=hours_old, max_experience_years=max_experience_years)
                 except Exception:
                     pass
 
@@ -201,7 +235,7 @@ def scrape_naukri(search_terms: list[str], locations: list[str] = None, job_type
                     req = urllib.request.Request(f"https://r.jina.ai/{fallback_url2}", headers=HEADERS)
                     with urllib.request.urlopen(req, timeout=15, context=_SSL_CTX) as resp:
                         fb_text2 = resp.read().decode('utf-8', errors='ignore')
-                    parsed_jobs = parse_naukri_markdown(fb_text2, default_loc=loc, job_type=job_type, hours_old=hours_old)
+                    parsed_jobs = parse_naukri_markdown(fb_text2, default_loc=loc, job_type=job_type, hours_old=hours_old, max_experience_years=max_experience_years)
                 except Exception:
                     pass
 
@@ -212,7 +246,7 @@ def scrape_naukri(search_terms: list[str], locations: list[str] = None, job_type
                     req = urllib.request.Request(f"https://r.jina.ai/{fallback_url3}", headers=HEADERS)
                     with urllib.request.urlopen(req, timeout=15, context=_SSL_CTX) as resp:
                         fb_text3 = resp.read().decode('utf-8', errors='ignore')
-                    parsed_jobs = parse_naukri_markdown(fb_text3, default_loc=loc, job_type=job_type, hours_old=hours_old)
+                    parsed_jobs = parse_naukri_markdown(fb_text3, default_loc=loc, job_type=job_type, hours_old=hours_old, max_experience_years=max_experience_years)
                 except Exception:
                     pass
 

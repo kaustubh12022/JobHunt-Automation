@@ -43,12 +43,12 @@ def test_adversarial_zero_hallucination_prunes_all_fake_skills(master_resume, ze
             "Rust",
             "Java",
             "Python",
-            "Selenium",
+            "Git",
             "SQL"
         ]
     }
 
-    sanitized = validate_and_sanitize_tailored(adversarial_payload, master_resume, role_lens="qa")
+    sanitized = validate_and_sanitize_tailored(adversarial_payload, master_resume, role_lens="fullstack")
     skills = sanitized["skills"]
 
     # Explicitly verify fabricated skills from dispatch are pruned
@@ -65,7 +65,7 @@ def test_adversarial_zero_hallucination_prunes_all_fake_skills(master_resume, ze
     # Authentic skills should remain
     assert "Java" in skills
     assert "Python" in skills
-    assert "Selenium" in skills
+    assert "Git" in skills
     assert "SQL" in skills
 
     # CRITICAL CHALLENGE: Check if 'Go' (specified in prompt) was pruned or leaked!

@@ -14,6 +14,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from src.logger import logger
 from src.models import Job
+from src.config_loader import load_config
 
 _SSL_CTX = ssl.create_default_context()
 _SSL_CTX.check_hostname = False
@@ -46,11 +47,15 @@ def fetch_hirist_detail(job_id: int or str) -> str:
         logger.debug(f"Hirist detail fetch failed for {job_id}: {e}")
     return ""
 
-def scrape_hirist(search_terms: list[str], locations: list[str] = None, job_type: str = "fulltime", max_results_per_query: int = 15, fetch_details: bool = True, hours_old: int = 48) -> list[Job]:
+def scrape_hirist(search_terms: list[str], locations: list[str] = None, job_type: str = "fulltime", max_results_per_query: int = 15, fetch_details: bool = True, hours_old: int = 48, max_experience_years: int = None) -> list[Job]:
     """
     Scrape Hirist tech developer jobs via Gladiator REST API.
     Enforces native 'posting' freshness parameter and in-scraper timestamp cutoff.
     """
+    config = load_config()
+    if max_experience_years is None:
+        max_experience_years = config.get('search', {}).get('max_experience_years', 0)
+    
     jobs = []
     seen_ids = set()
     cutoff = pd.Timestamp.now(tz="UTC") - pd.Timedelta(hours=hours_old) if hours_old is not None else None
@@ -108,6 +113,11 @@ def scrape_hirist(search_terms: list[str], locations: list[str] = None, job_type
             # Experience check (favor fresher / junior 0-3 years)
             min_exp = r.get("min", 0)
             max_exp = r.get("max", 0)
+            
+            # Hard filter at scraper level for non-fresher jobs
+            if min_exp is not None and min_exp > max_experience_years:
+                logger.debug(f"Dropping non-fresher Hirist job ({title}): min_exp={min_exp}")
+                continue
 
             # Date parsing from createdTimeMs epoch
             created_ms = r.get("createdTimeMs") or r.get("createdTime")
@@ -146,7 +156,9 @@ def scrape_hirist(search_terms: list[str], locations: list[str] = None, job_type
                 job_type=job_type,
                 apply_type=apply_type,
                 date_posted=posted_dt,
-                is_remote=bool(r.get("workFromHome", False)) or "remote" in location_str.lower()
+                is_remote=bool(r.get("workFromHome", False)) or "remote" in location_str.lower(),
+                min_experience=min_exp,
+                max_experience=max_exp
             )
             jobs.append(job_obj)
 

@@ -249,7 +249,7 @@ class TestResumeInjectionAndPromptFormatting:
         assert len(resume["skills"]) >= 20
         assert "Java" in resume["skills"]
         assert "Python" in resume["skills"]
-        assert "Selenium (Basic UI Automation)" in resume["skills"]
+        assert "DeepSeek API" in resume["skills"]
 
     def test_prompt_formatting_replaces_master_resume_json(self):
         """Verify {master_resume_json} in prompt is replaced with valid JSON."""

@@ -90,7 +90,7 @@ function IdleView({ onStart }) {
   return (
     <div className="glass-panel" style={{ padding: '48px', maxWidth: '820px', margin: '40px auto', textAlign: 'center' }}>
       <motion.div initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '32px', margin: '0 0 8px', color: 'var(--text-main)', fontWeight: 700 }}>AutoApply Pipeline</h1>
+        <h1 style={{ fontSize: '32px', margin: '0 0 8px', color: 'var(--text-main)', fontWeight: 700 }}>JOB HUNT Pipeline</h1>
         <p style={{ color: 'var(--text-muted)' }}>Unified fresher hunt across all verified career platforms</p>
       </motion.div>
       

@@ -42,6 +42,7 @@ def main():
     parser.add_argument("--platforms", type=str, default=None, help="Comma-separated platforms to scrape (e.g. linkedin,indeed,workday)")
     parser.add_argument("--strict-3-col", action="store_true", help="Force strictly 3 columns in the Job Applications Table (Company, Role, Apply Link)")
     parser.add_argument("--zero-ai", action="store_true", help="Run 100% deterministic pipeline without calling DeepSeek AI (zero token cost, instant)")
+    parser.add_argument("--no-docs", action="store_true", help="Skip all resume PDF, document, and ZIP generation")
     args = parser.parse_args()
     
     start_time = datetime.now()
@@ -50,8 +51,8 @@ def main():
     dry_run = args.dry_run
     use_ai = not args.zero_ai
     wait_offpeak = (not args.no_wait_offpeak) and use_ai
-    should_tailor = not args.no_tailor
-    generate_table = not args.no_table_pdf
+    should_tailor = not (args.no_tailor or args.no_docs)
+    generate_table = not (args.no_table_pdf or args.no_docs)
 
     progress = {
         "phase": "initializing",
@@ -273,40 +274,44 @@ def main():
             from src.resume_tailor import tailor_resumes_batch
             from playwright.sync_api import sync_playwright
 
-            logger.info(f"   [Batch] Tailoring {len(shortlisted)} resumes ({'AI' if use_ai else 'Deterministic Rule-Lens'})...")
-            tailored_jsons = tailor_resumes_batch(shortlisted, use_ai=use_ai)
+            RESUME_ALLOWED_PLATFORMS = {"linkedin", "indeed", "workday"}
+            tailorable_jobs = []
+            tailorable_indices = []
+            for idx, j in enumerate(shortlisted):
+                src = (getattr(j, "source", None) or "general").lower().replace("workday-", "")
+                if any(plat in src for plat in RESUME_ALLOWED_PLATFORMS):
+                    tailorable_jobs.append(j)
+                    tailorable_indices.append(idx)
+                else:
+                    logger.info(f"   [{idx+1}/{len(shortlisted)}] ⏭️ Resume generation skipped for platform {src.upper()} ({j.company}).")
+
+            logger.info(f"   [Batch] Tailoring {len(tailorable_jobs)} resumes for {RESUME_ALLOWED_PLATFORMS} ({'AI' if use_ai else 'Deterministic Rule-Lens'})...")
+            tailored_jsons = tailor_resumes_batch(tailorable_jobs, use_ai=use_ai) if tailorable_jobs else []
             date_str = get_human_date_str()
 
-            generated_paths = []
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                page = browser.new_page()
-                for i, (job, tailored_data) in enumerate(zip(shortlisted, tailored_jsons)):
-                    apply_type = (getattr(job, "apply_type", None) or "easy_apply").lower()
-                    if apply_type == "easy_apply":
-                        logger.info(f"   [{i+1}/{len(shortlisted)}] ⚡ Easy Apply role ({job.company}): No resume generation per protocol.")
-                        generated_paths.append("")
-                        continue
+            generated_paths = [""] * len(shortlisted)
+            if tailorable_jobs:
+                with sync_playwright() as p:
+                    browser = p.chromium.launch(headless=True)
+                    page = browser.new_page()
+                    for t_idx, (job, orig_idx, tailored_data) in enumerate(zip(tailorable_jobs, tailorable_indices, tailored_jsons)):
+                        if isinstance(tailored_data, Exception) or not tailored_data:
+                            logger.error(f"   ❌ RESUME TAILORING FAILED for {job.company}: {tailored_data}")
+                            continue
 
-                    if isinstance(tailored_data, Exception) or not tailored_data:
-                        logger.error(f"   ❌ RESUME TAILORING FAILED for {job.company}: {tailored_data}")
-                        generated_paths.append("")
-                        continue
+                        logger.info(f"   [{t_idx+1}/{len(tailorable_jobs)}] Rendering PDF for: {job.title} at {job.company}")
+                        try:
+                            pdf_path = generate_pdf(job, tailored_data, date_str, page)
+                            generated_paths[orig_idx] = pdf_path
+                            job.tailored_resume = tailored_data
+                        except Exception as e:
+                            logger.error(f"   ❌ PDF FAILED for {job.company}: {e}")
+                            
+                        progress["resumes_generated"] = sum(1 for p in generated_paths if p)
+                        progress["status_text"] = f"Generated {progress['resumes_generated']}/{len(tailorable_jobs)} resumes..."
+                        update_progress(progress)
 
-                    logger.info(f"   [{i+1}/{len(shortlisted)}] Rendering PDF for: {job.title} at {job.company}")
-                    try:
-                        pdf_path = generate_pdf(job, tailored_data, date_str, page)
-                        generated_paths.append(pdf_path)
-                        job.tailored_resume = tailored_data
-                    except Exception as e:
-                        logger.error(f"   ❌ PDF FAILED for {job.company}: {e}")
-                        generated_paths.append("")
-                        
-                    progress["resumes_generated"] = sum(1 for p in generated_paths if p)
-                    progress["status_text"] = f"Generated {progress['resumes_generated']}/{len(shortlisted)} resumes..."
-                    update_progress(progress)
-
-                browser.close()
+                    browser.close()
             pdf_paths = generated_paths
         except Exception as e:
             logger.error(f"Error during resume tailoring and PDF generation: {e}")
@@ -416,7 +421,7 @@ def main():
 
     # ── PHASE 6: PACKAGE DELIVERABLE ZIP ARCHIVE ──
     zip_archive_path = ""
-    if shortlisted:
+    if shortlisted and not args.no_docs:
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         logger.info("PACKAGING FINAL DELIVERABLE ZIP ARCHIVE")
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -431,6 +436,8 @@ def main():
                 pdf_paths=pdf_paths,
                 table_pdf_path=table_pdf_path,
                 desktop_dir=desktop_dir,
+                shortlisted_jobs=shortlisted,
+                platforms=platforms,
             )
             if zip_archive_path:
                 progress["zip_path"] = zip_archive_path
@@ -445,6 +452,49 @@ def main():
     progress["elapsed_seconds"] = elapsed
     progress["status_text"] = f"Pipeline complete in {elapsed // 60}m {elapsed % 60}s!"
     update_progress(progress)
+
+    all_scored = getattr(scored_jobs, "all_scored_jobs", scored_jobs)
+    summary_data = {
+        "regex_passed": [
+            {
+                "company": j.company,
+                "role": j.title,
+                "link": getattr(j, "url", ""),
+                "platform": getattr(j, "source", ""),
+                "job_type": getattr(j, "job_type", "fulltime")
+            }
+            for j in (jobs or [])
+        ],
+        "scored_jobs": [
+            {
+                "company": j.company,
+                "role": j.title,
+                "link": getattr(j, "url", ""),
+                "platform": getattr(j, "source", ""),
+                "score": getattr(j, "score", 0),
+                "reasons": getattr(j, "reasons", ""),
+                "job_type": getattr(j, "job_type", "fulltime")
+            }
+            for j in all_scored
+        ],
+        "shortlisted": [
+            {
+                "company": j.company,
+                "role": j.title,
+                "link": getattr(j, "url", ""),
+                "platform": getattr(j, "source", ""),
+                "score": getattr(j, "score", 0),
+                "reasons": getattr(j, "reasons", ""),
+                "job_type": getattr(j, "job_type", "fulltime")
+            }
+            for j in shortlisted
+        ]
+    }
+    try:
+        with open(Path(__file__).parent / "last_run_jobs.json", "w", encoding="utf-8") as f:
+            json.dump(summary_data, f, indent=2)
+    except Exception as e:
+        logger.debug(f"Could not save last_run_jobs.json: {e}")
 
     logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     logger.info(f"🎉 PIPELINE COMPLETE IN {elapsed // 60}m {elapsed % 60}s!")

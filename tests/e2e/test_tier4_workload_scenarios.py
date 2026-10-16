@@ -89,12 +89,11 @@ def test_tier4_scenario_1_fresher_qa_automation_pune(master_resume, zero_halluci
     # 3. Role-Lens Tailoring Mock (QA Lens)
     tailored_qa_resume = json.loads(json.dumps(master_resume))
     tailored_qa_resume["profile_summary"] = (
-        "Graduate Engineer skilled in Python, Selenium, Postman, SQL, and automated test pipelines. "
-        "Experienced in designing automated test suites, REST API testing, and backend validation."
+        "Graduate Engineer skilled in Python, Postman, SQL, and automated data pipelines. "
+        "Experienced in designing automated pipelines, REST API testing, and backend validation."
     )
     tailored_qa_resume["skills"] = [
-        "Python", "Selenium (Basic UI Automation)", "Postman (API Testing)",
-        "pytest (Python Testing)", "JUnit (Unit Testing)", "SQL", "Git", "REST APIs"
+        "Python", "FastAPI", "Postman", "SQL", "Git", "REST APIs"
     ]
 
     # 4. Zero-Hallucination Guardrail Check
@@ -108,7 +107,7 @@ def test_tier4_scenario_1_fresher_qa_automation_pune(master_resume, zero_halluci
     html_rendered = template.render(resume=tailored_qa_resume, job=scored_job)
     assert "Junior QA Automation Engineer" in scored_job.title
     assert "Persistent Systems" in scored_job.company
-    assert "Selenium" in html_rendered
+    assert "Python" in html_rendered
     assert "Postman" in html_rendered
     assert "<h2>PROFILE</h2>" in html_rendered or "<h2>PROFILE SUMMARY</h2>" in html_rendered
     assert "<h2>SKILLS</h2>" in html_rendered or "<h2>TECHNICAL SKILLS</h2>" in html_rendered
@@ -276,19 +275,19 @@ def test_tier4_scenario_3_fresher_dotnet_developer_mumbai(master_resume, zero_ha
         assert len(scored_jobs) == 1
         assert scored_jobs[0].score == 65
 
-    # 2. Role-Lens Tailoring (weave C# from Azure certification)
+    # 2. Role-Lens Tailoring (weave cloud services from Azure certification)
     tailored_dotnet = json.loads(json.dumps(master_resume))
     tailored_dotnet["profile_summary"] = (
-        "Graduate Engineer with foundational knowledge of C# and cloud services via Microsoft Azure certification, "
+        "Graduate Engineer with foundational cloud architecture knowledge via Microsoft Azure certification, "
         "complemented by hands-on backend experience in SQL and REST API integrations."
     )
     tailored_dotnet["skills"] = [
-        "C# (Basics via Azure)", "SQL", "REST APIs", "Git", "Python", "Java"
+        "SQL", "REST APIs", "Git", "Python", "Java", "Postman"
     ]
 
     is_valid, violations = zero_hallucination_validator(tailored_dotnet)
     assert is_valid, f"Anti-hallucination failed: {violations}"
-    assert "C# (Basics via Azure)" in tailored_dotnet["skills"]
+    assert "SQL" in tailored_dotnet["skills"]
 
 
 # =====================================================================

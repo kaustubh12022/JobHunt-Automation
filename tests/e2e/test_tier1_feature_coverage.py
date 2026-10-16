@@ -488,19 +488,24 @@ def test_f6_4_token_telemetry_accounting():
 
 
 def test_f6_5_token_cost_calculation():
-    """F6.5: Verify DeepSeek token pricing calculation ($0.0028/1M cached vs $0.014/1M unprompted)."""
-    # Pricing: $0.14 per 1M input tokens (cache miss), $0.028 per 1M (cache hit), $0.28 per 1M output tokens
+    """F6.5: Verify DeepSeek token pricing calculation against calculate_deepseek_cost."""
+    from src.ai_engine import calculate_deepseek_cost, DEEPSEEK_PRICING
     cache_hit_tokens = 2000
     cache_miss_tokens = 500
     output_tokens = 300
 
-    cost_cached = (cache_hit_tokens / 1_000_000) * 0.028
-    cost_miss = (cache_miss_tokens / 1_000_000) * 0.14
-    cost_output = (output_tokens / 1_000_000) * 0.28
-    total_cost = cost_cached + cost_miss + cost_output
+    total_cost = calculate_deepseek_cost("deepseek-chat", cache_hit_tokens, cache_miss_tokens, output_tokens)
 
-    assert cost_cached < cost_miss  # Cached tokens should be significantly cheaper
-    assert round(total_cost, 6) > 0
+    chat_rates = DEEPSEEK_PRICING["chat"]
+    expected_cost = (
+        (cache_hit_tokens / 1_000_000) * chat_rates["cache_hit"]
+        + (cache_miss_tokens / 1_000_000) * chat_rates["cache_miss"]
+        + (output_tokens / 1_000_000) * chat_rates["completion"]
+    )
+
+    assert total_cost == round(expected_cost, 8)
+    assert chat_rates["cache_hit"] < chat_rates["cache_miss"]  # Cached tokens should be significantly cheaper
+    assert total_cost > 0
 
 
 # =====================================================================
@@ -580,7 +585,7 @@ def test_f7_5_delta_json_merge_preserves_static_fields(master_resume, mock_deeps
 def test_f8_1_zero_fabricated_skills(master_resume, zero_hallucination_validator):
     """F8.1: Verify tailored skills are validated with zero fabricated qualifications."""
     valid_tailored = json.loads(json.dumps(master_resume))
-    valid_tailored["skills"] = ["Java", "Python", "SQL", "Selenium", "Postman", "Git"]
+    valid_tailored["skills"] = ["Java", "Python", "SQL", "Spring Boot", "Postman", "Git"]
     is_valid, violations = zero_hallucination_validator(valid_tailored)
     assert is_valid, f"Expected valid resume, got violations: {violations}"
 

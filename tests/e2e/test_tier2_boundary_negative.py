@@ -463,7 +463,7 @@ def test_f8_b3_hallucinated_employer_detection(master_resume, zero_hallucination
 def test_f8_b4_exact_match_synonym_validation(master_resume, zero_hallucination_validator):
     """F8.B4: Case-insensitive match for valid master skills ('java', 'sql', 'python')."""
     valid = json.loads(json.dumps(master_resume))
-    valid["skills"] = ["java", "sql", "python", "selenium", "git"]
+    valid["skills"] = ["java", "sql", "python", "spring boot", "git"]
     is_valid, violations = zero_hallucination_validator(valid)
     assert is_valid, f"Case-insensitive match failed: {violations}"
 

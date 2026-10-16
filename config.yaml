@@ -14,38 +14,66 @@ ai:
 # --- Job Search Settings ---
 search:
   platforms:
-    - "naukri"
-    - "instahyre"
-    - "internshala"
-    - "unstop"
-    - "hirist"
-    - "workday"
     - "linkedin"
     - "indeed"
+    - "workday"
+    - "naukri"
+    - "internshala"
+    - "hirist"
   search_terms:
-    # MERN
-    - "Junior Full Stack Developer"
-    - "Junior Node.js Developer"
-    - "Junior React Developer"
-    # Java
-    - "Associate Java Developer"
-    - "Junior Java Developer"
-    # Backend
-    - "Junior Backend Developer"
-    - "Associate Backend Developer"
-    # Enterprise Fresher
+    # Full Stack & Web
+    - "Full Stack Developer"
+    - "React Developer"
+    - "Node.js Developer"
+    # Java & Backend
+    - "Java Developer"
+    - "Backend Developer"
+    - "Python Developer"
+    # Enterprise Fresher & Trainee
     - "Graduate Engineer Trainee"
-    - "Associate Software Engineer"
     - "Software Engineer Trainee"
-    # Applied AI
+    - "Associate Software Engineer"
+    - "SDE Intern"
+    # Applied AI & Emerging Tech
     - "GenAI Developer"
     - "AI Full Stack Developer"
+
+  buckets:
+    full_stack:
+      name: "Full Stack & Web"
+      max_results: 50
+      queries:
+        - "Full Stack Developer"
+        - "React Developer"
+        - "Node.js Developer"
+    java_backend:
+      name: "Java & Backend"
+      max_results: 50
+      queries:
+        - "Java Developer"
+        - "Backend Developer"
+        - "Python Developer"
+    enterprise_trainee:
+      name: "Enterprise Trainee & SDE Intern"
+      max_results: 50
+      queries:
+        - "Graduate Engineer Trainee"
+        - "Software Engineer Trainee"
+        - "Associate Software Engineer"
+        - "SDE Intern"
+    ai_genai:
+      name: "Applied AI & Emerging Tech"
+      max_results: 50
+      queries:
+        - "GenAI Developer"
+        - "AI Full Stack Developer"
   locations:
     - "Pune"
     - "Mumbai"
     - "Bangalore"
   hours_old: 48                            # Set to 48h per user requirement
-  results_wanted: 50                      # Clamped from 100 -> 50 (practical LinkedIn ceiling)
+  max_experience_years: 0                  # Only keep jobs where min_experience <= this value (0 = fresher only)
+  results_wanted: 500                      # Global scraper ceiling across all search terms
   job_types:
     - "internship"
     - "fulltime"

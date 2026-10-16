@@ -11,7 +11,7 @@ class Job:
     id: Optional[str] = None
     source: str = ""          # Which platform (LinkedIn, Indeed, Workday, etc.)
     job_type: str = "fulltime" # fulltime or internship
-    apply_type: str = "easy_apply" # easy_apply or company_site
+    apply_type: str = "company_site" # easy_apply or company_site
     score: Optional[int] = None
     missing_skills: Optional[List[str]] = None   # Skills candidate LACKS for this role
     reasons: Optional[str] = None
@@ -22,6 +22,17 @@ class Job:
     tailored_resume: Optional[dict] = None
     user_selected_skills: Optional[List[str]] = None
     tokens_used: int = 0
+    cost_usd: float = 0.0
+    token_usage: dict = field(default_factory=dict)
     date_posted: Optional[object] = None
     is_remote: Optional[bool] = False
+    min_experience: Optional[int] = None   # Minimum years required (0 = fresher-eligible, None = unknown)
+    max_experience: Optional[int] = None   # Maximum years in range
     raw_metadata: Optional[dict] = None
+    applicant_count: Optional[int] = None
+    is_early_applicant: Optional[bool] = None
+    early_priority_tier: Optional[str] = None  # "TIER_1_IMMEDIATE", "TIER_2_EARLY", "TIER_3_NORMAL", "TIER_4_SATURATED"
+    is_consultancy_spam: Optional[bool] = None
+    veto_reason: Optional[str] = None
+    application_status: Optional[str] = "DISCOVERED"
+    submission_proof: Optional[dict] = None

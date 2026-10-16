@@ -174,3 +174,20 @@ temp/
 video/
 har/
 scratch_check*.py
+
+# Scraper run artifacts & caches
+cached_naukri_jobs.csv
+final_jobs.csv
+last_run_jobs.json
+pipeline_summary.json
+
+# SQLite databases
+*.db
+*.sqlite
+
+# Browser profiles
+edge_profile/
+**/edge_profile/**
+
+# Graphify output
+graphify-out/

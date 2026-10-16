@@ -90,6 +90,13 @@ def main():
         # 2. Wait for Wi-Fi to stabilize after wake
         wait_for_internet(timeout_seconds=45)
 
+        # 2.5 Sync profile and credentials from Desktop resume
+        try:
+            from src.profile_manager import sync_profile_from_desktop
+            sync_profile_from_desktop()
+        except Exception as e:
+            logger.warning(f"Could not auto-sync profile from Desktop: {e}")
+
         # 3. Run the main pipeline with off-peak enabled immediately
         cmd = [
             sys.executable,
@@ -125,6 +132,14 @@ def main():
 
         # 4. Create the ZIP archive on Desktop
         zip_result = package_zip_archive()
+
+        # 5. Generate Morning Executive Digest & Audit Telemetry
+        try:
+            from src.morning_digest import generate_morning_digest
+            digest_report = generate_morning_digest()
+            logger.info(f"🌅 Morning Digest generated: {digest_report.get('markdown_path')}")
+        except Exception as e:
+            logger.warning(f"Could not generate morning digest: {e}")
 
         logger.info("==================================================")
         logger.info("🎉 MORNING RUN COMPLETE!")

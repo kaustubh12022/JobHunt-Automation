@@ -235,7 +235,7 @@ def test_m4_zero_hallucination_prunes_fabricated_skills(master_resume, zero_hall
             "Python",
             "Kubernetes Cluster Management",
             "AWS Certified Solutions Architect",
-            "Selenium",
+            "Spring Boot",
             "Docker Containerization",
             "Postman",
             "SAP ABAP Enterprise",
@@ -248,7 +248,7 @@ def test_m4_zero_hallucination_prunes_fabricated_skills(master_resume, zero_hall
     sanitized = validate_and_sanitize_tailored(
         tailored_data=untrusted_llm_delta,
         master_resume=master_resume,
-        role_lens="qa"
+        role_lens="java"
     )
 
     output_skills = sanitized["skills"]
@@ -263,7 +263,7 @@ def test_m4_zero_hallucination_prunes_fabricated_skills(master_resume, zero_hall
     # Genuine skills must be kept
     assert "Java" in output_skills
     assert "Python" in output_skills
-    assert "Selenium" in output_skills
+    assert "Spring Boot" in output_skills
     assert "Postman" in output_skills
     assert "SQL" in output_skills
     assert "Git" in output_skills
@@ -326,11 +326,11 @@ def test_m4_zero_hallucination_locks_education_and_employer(master_resume, zero_
 
 
 def test_m4_canonical_alias_matching(master_resume, zero_hallucination_validator):
-    """Common skill aliases ('Core Java', 'Selenium WebDriver', 'RESTful API', 'pytest testing') are recognized."""
+    """Common skill aliases ('Core Java', 'RESTful API', 'JS', 'Azure') are recognized."""
     raw_delta = {
-        "skills": ["Core Java", "Selenium WebDriver", "RESTful API", "pytest testing", "C#", "Azure"]
+        "skills": ["Core Java", "RESTful API", "JavaScript", "Azure", "Python 3", "Spring Core"]
     }
-    sanitized = validate_and_sanitize_tailored(raw_delta, master_resume, role_lens="qa")
+    sanitized = validate_and_sanitize_tailored(raw_delta, master_resume, role_lens="java")
 
     is_valid, violations = zero_hallucination_validator(sanitized)
     assert is_valid, f"Canonical aliases failed validator: {violations}"
@@ -341,8 +341,8 @@ def test_m4_empty_skills_fallback(master_resume, zero_hallucination_validator):
     """Empty or completely invalid skills delta falls back to role-relevant master skills."""
     empty_delta = {"skills": []}
     sanitized = validate_and_sanitize_tailored(empty_delta, master_resume, role_lens="qa")
-    assert len(sanitized["skills"]) >= 8
-    assert "Selenium" in sanitized["skills"]
+    assert len(sanitized["skills"]) >= 6
+    assert "Postman" in sanitized["skills"]
 
     is_valid, violations = zero_hallucination_validator(sanitized)
     assert is_valid, f"Fallback skills failed validator: {violations}"
@@ -415,16 +415,16 @@ def test_m4_coverage_qa_role_with_auto_injection(master_resume):
     job.is_testing_role = True
 
     applicable = get_applicable_candidate_skills(job, master_resume)
-    assert "Selenium" in applicable
     assert "Postman" in applicable
-    assert "pytest" in applicable
     assert "SQL" in applicable
     assert "Git" in applicable
+    assert "Python" in applicable
     assert "Docker" not in applicable, "Non-candidate skills must not be in M ∩ J"
     assert "JIRA" not in applicable
+    assert "Selenium" not in applicable, "Non-candidate skills must not be in M ∩ J"
 
     incomplete_delta = {
-        "skills": ["Python", "Selenium"]
+        "skills": ["Python", "Postman"]
     }
 
     sanitized = validate_and_sanitize_tailored(incomplete_delta, master_resume, role_lens="qa", job=job)
@@ -456,7 +456,7 @@ def test_m4_coverage_java_role(master_resume):
 
 
 def test_m4_coverage_dotnet_role(master_resume):
-    """DotNet job achieves >= 95% coverage of applicable candidate skills (C#, SQL, Azure)."""
+    """DotNet job achieves >= 95% coverage of applicable candidate skills (SQL, Azure)."""
     job = Job(
         title=".NET Developer Fresher",
         company="Cognizant",
@@ -470,8 +470,8 @@ def test_m4_coverage_dotnet_role(master_resume):
     cov_pct, matched, all_app = calculate_jd_requirement_coverage(sanitized, job, master_resume)
 
     assert cov_pct >= 95.0, f"Expected >= 95% coverage, got {cov_pct:.1f}%"
-    assert "C#" in matched
     assert "SQL" in matched
+    assert "Azure" in matched
 
 
 def test_m4_coverage_zero_applicable_skills_edge_case(master_resume):
@@ -500,16 +500,16 @@ def test_m4_coverage_zero_applicable_skills_edge_case(master_resume):
 def test_m4_e2e_tailor_resume_async_integration(sample_fresher_qa_job, master_resume, zero_hallucination_validator):
     """Full pipeline tailor_resume_async() produces role-lens reframed, sanitized resume with 0 hallucinations."""
     mock_ai_json = '''{
-        "profile_summary": "Goal-oriented IT graduate with solid foundation in QA automation, Selenium, Postman, and pytest.",
-        "tailored_skills": ["Selenium", "Postman", "pytest", "Python", "Java", "SQL", "Git", "AWS Lambda"],
+        "profile_summary": "Goal-oriented IT graduate with solid foundation in backend services, REST APIs, Postman, and Python.",
+        "tailored_skills": ["REST APIs", "Postman", "Spring Boot", "Python", "Java", "SQL", "Git", "AWS Lambda"],
         "tailored_experience": [
             {
-                "position": "QA Automation Intern",
+                "position": "Java Developer Intern",
                 "company": "CWIPedia Technologies",
                 "key_responsibilities": [
                     "Automated API test suites using Postman and Python, reducing regression cycles by 30%.",
-                    "Engineered modular UI test scripts with Selenium WebDriver for core product workflows.",
-                    "Executed automated unit tests with JUnit and collaborated in Agile sprint stand-ups."
+                    "Engineered modular UI components with JavaScript for core product workflows.",
+                    "Executed automated unit tests and collaborated in Agile sprint stand-ups."
                 ]
             }
         ],

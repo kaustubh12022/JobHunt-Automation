@@ -7,6 +7,7 @@ Usage:
     python run_batch_urls.py https://link1 https://link2
 """
 
+import os
 import sys
 import argparse
 from pathlib import Path
@@ -69,14 +70,11 @@ def main():
         output_desktop_dir=args.output_dir
     )
 
-    from src.archive_packager import package_pipeline_archive
-    import os
     desktop_dir = Path(os.environ.get("USERPROFILE", "C:/Users/kalek")) / "Desktop"
     
     # Identify table pdf from results
     table_pdf = results.get('catalog_pdf') or str(desktop_dir / "Job_Applications_Table.pdf")
-    pdf_paths = [r.get('filepath') for r in results.get('shortlisted_jobs', []) if r.get('filepath')]
-    zip_path = package_pipeline_archive(pdf_paths=pdf_paths, table_pdf_path=table_pdf, desktop_dir=desktop_dir)
+    zip_path = results.get("zip_path", "")
 
     # Save comprehensive report to batch_summary_report.json
     import json

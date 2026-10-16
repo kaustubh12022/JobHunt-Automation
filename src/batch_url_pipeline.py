@@ -1,5 +1,5 @@
 """
-batch_url_pipeline.py — End-to-end automated pipeline for batch URL resume tailoring.
+batch_url_pipeline.py â€” End-to-end automated pipeline for batch URL resume tailoring.
 
 Workflow:
 1. Extract job details and direct apply links from pasted URLs (direct or aggregator portals).
@@ -50,7 +50,8 @@ def extract_urls_from_text(text: str) -> list[str]:
     if not text:
         return []
     # Pre-clean concatenated strings often found in WhatsApp/Telegram broadcast dumps
-    text = re.sub(r'(/)(Join|Whatsapp|Telegram|Apply|Click|\d+[\ufe0e\ufe0f]?\u20e3|\d+[\.\)]|\d+[\s\u2000-\u3300])', r'\1 \2', text, flags=re.I)
+    # Only split if attached list number or action words (do NOT split numeric URL paths like /1443153774769)
+    text = re.sub(r'(/)(Join|Whatsapp|Telegram|Apply|Click|\d+[\ufe0e\ufe0f]?\u20e3|\d+[\.\)]|[1-9]\s+[A-Za-z])', r'\1 \2', text, flags=re.I)
     
     # Match valid ASCII URL characters to avoid absorbing emojis, unicode dashes, etc.
     raw_urls = re.findall(r'(?:https?://|mailto:)[a-zA-Z0-9\-._~:/?#\[\]@!$&\'()*+,;%=]+', text)
@@ -120,28 +121,47 @@ def extract_context_from_raw_text(url: str, raw_text: str) -> dict:
     chunk_text = pre[prev_urls[-1].end():] if prev_urls else pre
     chunk_text = unicodedata.normalize('NFKD', chunk_text)
 
-    # Isolate emoji-prefixed fields or labels into distinct lines
-    normalized_chunk = re.sub(
-        r'([🏢💼📍💰🎓📋🔗🚨🔖📺💬📢🔥]|Company\s*:|Roles?\s*:|Positions?\s*:|Location\s*:|Batch\s*:|Salary\s*:|Eligibility\s*:)',
-        r'\n\1',
-        chunk_text
-    )
+    lines = [re.sub(r'[\*\`_]', '', l).strip() for l in chunk_text.splitlines() if l.strip()]
 
     comp, role, loc, yoe, qual = "", "", "India", "", ""
-    for l in normalized_chunk.splitlines():
-        l = l.strip()
-        if not l:
-            continue
-        m = re.search(r'Company\s*:\s*([^🏢💼📍💰🎓📋🔗🚨🔖📺💬📢🔥\n\r|—–]+)', l, re.I)
-        if m and not comp: comp = m.group(1).strip()
-        m = re.search(r'(?:Roles?|Positions?)\s*:\s*([^🏢💼📍💰🎓📋🔗🚨🔖📺💬📢🔥\n\r|—–]+)', l, re.I)
-        if m and not role: role = m.group(1).strip()
-        m = re.search(r'Location\s*:\s*([^🏢💼📍💰🎓📋🔗🚨🔖📺💬📢🔥\n\r|—–]+)', l, re.I)
-        if m and not loc: loc = m.group(1).strip()
-        m = re.search(r'(?:YOE|Batch|Experience)\s*:\s*([^🏢💼📍💰🎓📋🔗🚨🔖📺💬📢🔥\n\r|—–]+)', l, re.I)
-        if m and not yoe: yoe = m.group(1).strip()
-        m = re.search(r'(?:Qualification|Qualifications|Eligibility)\s*:\s*([^🏢💼📍💰🎓📋🔗🚨🔖📺💬📢🔥\n\r|—–]+)', l, re.I)
-        if m and not qual: qual = m.group(1).strip()
+
+    for l in lines:
+        if not comp:
+            m = re.search(r'(?:Company|🏢)\s*[:\-]\s*([^\n\r|—–]+)', l, re.I)
+            if m: comp = m.group(1).strip()
+        if not role:
+            m = re.search(r'(?:Job\s*Roles?|Roles?|Positions?|💼)\s*[:\-]\s*([^\n\r|]+)', l, re.I)
+            if m: role = m.group(1).strip()
+        if not loc:
+            m = re.search(r'(?:Locations?|📍)\s*[:\-]\s*([^\n\r|—–]+)', l, re.I)
+            if m: loc = m.group(1).strip()
+        if not yoe:
+            m = re.search(r'(?:YOE|Batch|Experience)\s*[:\-]\s*([^\n\r|—–]+)', l, re.I)
+            if m: yoe = m.group(1).strip()
+        if not qual:
+            m = re.search(r'(?:Qualifications?|Eligibility|🎓)\s*[:\-]\s*([^\n\r|—–]+)', l, re.I)
+            if m: qual = m.group(1).strip()
+
+    # Fallbacks from headline / announcement lines
+    for l in lines:
+        if not comp:
+            m = re.search(r'([A-Za-z0-9\s&.\-]+?)\s+(?:Off\s+Campus|Recruitment|Walk-in|Drive|Summer\s+Internship|Hiring|Mega\s+Off)', l, re.I)
+            if m:
+                cand = m.group(1).strip(' 🚨🎯*_-:[]()0123456789/,')
+                if len(cand) > 1 and cand.lower() not in ['apply', 'batch', 'also apply in other top mncs jobs', 'freshershunt']:
+                    comp = cand
+        if not role:
+            m = re.search(r'(?:Hiring|Drive).*?(?:for|as)\s+([^|]+?)(?:\s*\||\s*Apply|\s*$)', l, re.I)
+            if m:
+                cand = m.group(1).strip(' *_-:')
+                if len(cand) > 2 and cand.lower() not in ['freshers', 'freshers/experienced']:
+                    role = cand
+
+    # Domain fallback if still missing
+    if not comp and url:
+        m = re.search(r'https?://(?:www\.|jobs\.|careers\.)?([a-zA-Z0-9\-]+)\.(?:com|in|co|net|org)', url)
+        if m and m.group(1).lower() not in ['fresherscareers', 'freshersrecruitment', 'freshershunt', 'fresheropenings', 'outskill', 'tinyurl']:
+            comp = m.group(1).capitalize()
 
     # Apply strict safety bounds to prevent buffer/path overflow
     if comp:
@@ -157,7 +177,6 @@ def extract_context_from_raw_text(url: str, raw_text: str) -> dict:
         "qualifications": qual,
         "raw_block": chunk_text
     }
-
 
 
 def parse_job_from_url(url: str, raw_text: str = None, pw_context = None) -> dict:
@@ -574,7 +593,7 @@ def run_batch_url_pipeline(
                 dedup.append(u)
         urls = dedup
 
-    logger.info(f"🚀 Starting Batch URL Pipeline for {len(urls)} links (Threshold: >={min_score_threshold}%)...")
+    logger.info(f"ðŸš€ Starting Batch URL Pipeline for {len(urls)} links (Threshold: >={min_score_threshold}%)...")
 
     # Destination folder on Desktop
     config = load_config()
@@ -620,7 +639,20 @@ def run_batch_url_pipeline(
                 })
         browser.close()
 
-    # 3. AI Scoring for extracted jobs
+    # 3. AI Scoring for extracted jobs (Enforce 15:31 IST off-peak wait to lock in 50% discount)
+    from datetime import datetime
+    now_dt = datetime.now()
+    target_offpeak = now_dt.replace(hour=15, minute=31, second=0, microsecond=0)
+    if now_dt < target_offpeak:
+        wait_sec = int((target_offpeak - now_dt).total_seconds())
+        logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        logger.info(f"🕒 OFF-PEAK WAIT: Current time is {now_dt.strftime('%H:%M:%S')} IST.")
+        logger.info(f"   Target off-peak discount window: 15:31 IST (10:01 UTC).")
+        logger.info(f"   Waiting {wait_sec} seconds to lock in DeepSeek 50% off-peak rate for batch scoring...")
+        logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        time.sleep(wait_sec)
+        logger.info("🎯 TARGET TIME REACHED! DeepSeek 50% off-peak pricing is now ACTIVE!")
+
     scored_jobs = []
     if parsed_jobs:
         logger.info(f"🧠 Running DeepSeek AI scoring on {len(parsed_jobs)} extracted jobs...")
@@ -661,36 +693,19 @@ def run_batch_url_pipeline(
                 "missing_skills": job.missing_skills
             })
 
-    logger.info(f"📊 Scoring Results: {len(shortlisted_jobs)} shortlisted (>={min_score_threshold}%), {len(low_score_jobs)} below threshold, {len(failed_links)} failed parsing.")
+    logger.info(f"ðŸ“Š Scoring Results: {len(shortlisted_jobs)} shortlisted (>={min_score_threshold}%), {len(low_score_jobs)} below threshold, {len(failed_links)} failed parsing.")
 
     # 5. Tailor Resumes and Generate PDFs for Shortlisted Jobs
     generated_results = []
     strategic_insights = []
 
     if shortlisted_jobs:
-        logger.info(f"📄 Tailoring resumes & generating 1-page PDFs for {len(shortlisted_jobs)} shortlisted jobs...")
+        logger.info(f"ðŸ“„ Tailoring resumes & generating 1-page PDFs for {len(shortlisted_jobs)} shortlisted jobs...")
         
         for job in shortlisted_jobs:
             apply_type = str(getattr(job, "apply_type", "company_site") or "company_site").lower()
-            if apply_type == "easy_apply":
-                logger.info(f"   ⚡ Easy Apply role ({job.company}): No resume generation per protocol.")
-                generated_results.append({
-                    "company": job.company,
-                    "role": job.title,
-                    "score": job.score,
-                    "ats_score": job.score,
-                    "fit_label": "High Match" if job.score >= 75 else "Moderate Match",
-                    "filename": "",
-                    "filepath": "",
-                    "apply_link": job.url,
-                    "apply_type": "easy_apply",
-                    "supabase_resume_url": "",
-                    "missing_skills": job.missing_skills
-                })
-                continue
-
             logger.info(f"   Tailoring for Company Site: {job.company} - {job.title} (Score: {job.score}%)")
-            # Automatically weaves applicable candidate skills (M ∩ J) without manual checkboxes
+            # Automatically weaves applicable candidate skills (M âˆ© J) without manual checkboxes
             tailored_resume = asyncio.run(tailor_resume_async(job, selected_skills=None))
             
             # Safe filename: Company_Role.pdf
@@ -703,7 +718,7 @@ def run_batch_url_pipeline(
             generated_path = generate_resume_pdf(tailored_resume, str(pdf_path), job=job)
 
             if generated_path and os.path.exists(generated_path):
-                logger.info(f"   ✅ Saved to Desktop: {pdf_filename}")
+                logger.info(f"   âœ… Saved to Desktop: {pdf_filename}")
                 supabase_public_url = ""
                 try:
                     from src.db import supabase
@@ -731,13 +746,13 @@ def run_batch_url_pipeline(
                 
                 # Formulate strategic insight bullet
                 insight = (
-                    f"<b>{job.company} ({job.title} – {job.score}% Match):</b><br/>"
-                    f"• <i>Core Match:</i> Tailored with role-lens emphasizing candidate's relevant skills and verified engineering projects.<br/>"
-                    f"• <i>Action:</i> <b>Recommended for submission.</b> Apply directly via the link."
+                    f"<b>{job.company} ({job.title} â€“ {job.score}% Match):</b><br/>"
+                    f"â€¢ <i>Core Match:</i> Tailored with role-lens emphasizing candidate's relevant skills and verified engineering projects.<br/>"
+                    f"â€¢ <i>Action:</i> <b>Recommended for submission.</b> Apply directly via the link."
                 )
                 strategic_insights.append(insight)
             else:
-                logger.error(f"   ❌ Failed to generate PDF for {job.company}")
+                logger.error(f"   âŒ Failed to generate PDF for {job.company}")
                 failed_links.append({
                     "company": job.company,
                     "title": job.title,
@@ -749,9 +764,9 @@ def run_batch_url_pipeline(
     # Add strategic insights for low-score roles
     for lj in low_score_jobs[:3]:
         strategic_insights.append(
-            f"<b>{lj['company']} ({lj['role']} – {lj['score']}% Match):</b><br/>"
-            f"• <i>Stack Evaluation:</i> {lj['reason']}<br/>"
-            f"• <i>Recommendation:</i> Filtered out (score &lt; {min_score_threshold}%). No resume generated."
+            f"<b>{lj['company']} ({lj['role']} â€“ {lj['score']}% Match):</b><br/>"
+            f"â€¢ <i>Stack Evaluation:</i> {lj['reason']}<br/>"
+            f"â€¢ <i>Recommendation:</i> Filtered out (score &lt; {min_score_threshold}%). No resume generated."
         )
 
     # 6. Generate Summary.pdf
@@ -764,7 +779,7 @@ def run_batch_url_pipeline(
             low_score_jobs=low_score_jobs,
             strategic_insights=strategic_insights
         )
-        logger.info(f"📋 Summary PDF generated: {summary_pdf_path}")
+        logger.info(f"ðŸ“‹ Summary PDF generated: {summary_pdf_path}")
     except Exception as e:
         logger.error(f"Failed to generate Summary.pdf: {e}")
 
@@ -778,7 +793,7 @@ def run_batch_url_pipeline(
                 jobs_data=generated_results,
                 output_dir=desktop_dir
             )
-            logger.info(f"🎨 Visual Catalog PDF generated: {catalog_pdf_path}")
+            logger.info(f"ðŸŽ¨ Visual Catalog PDF generated: {catalog_pdf_path}")
             
             # Save dedicated copies named Job_Applications_Table.pdf on root Desktop & in folder
             root_desktop = Path(desktop_base)
@@ -786,7 +801,7 @@ def run_batch_url_pipeline(
             if catalog_pdf_path and os.path.exists(catalog_pdf_path):
                 shutil.copy(catalog_pdf_path, table_pdf_path)
                 shutil.copy(catalog_pdf_path, desktop_dir / "Job_Applications_Table.pdf")
-                logger.info(f"   ✅ Saved Table PDF: {table_pdf_path}")
+                logger.info(f"   âœ… Saved Table PDF: {table_pdf_path}")
                 
             # Generate clean 3-Column Table CSV
             import csv
@@ -797,7 +812,7 @@ def run_batch_url_pipeline(
                     writer.writerow(["Company Name", "Job Title", "Direct Apply Link"])
                     for r in generated_results:
                         writer.writerow([r.get("company", ""), r.get("role", ""), r.get("apply_link", "")])
-            logger.info(f"   ✅ Saved 3-Column Table CSV: {table_csv_path}")
+            logger.info(f"   âœ… Saved 3-Column Table CSV: {table_csv_path}")
         except Exception as e:
             logger.error(f"Failed to generate Table PDF / CSV: {e}")
 
@@ -805,42 +820,42 @@ def run_batch_url_pipeline(
     summary_md_path = desktop_dir / "Summary.md"
     try:
         md_lines = [
-            f"# 📋 Batch Tailored Resumes – {today_iso}",
+            f"# ðŸ“‹ Batch Tailored Resumes â€“ {today_iso}",
             "",
             f"**Total Links Provided:** {len(urls)}",
             f"**Resumes Generated (Score >= {min_score_threshold}%):** {len(generated_results)}",
             f"**Low Relevance (< {min_score_threshold}%):** {len(low_score_jobs)}",
             f"**Failed / Category Links:** {len(failed_links)}",
             "",
-            "## ✅ Generated Resumes",
+            "## âœ… Generated Resumes",
             "",
             "| # | Company | Role | Match Score | Tailored Resume | Apply Link |",
             "|---|---------|------|-------------|-----------------|------------|"
         ]
         for idx, r in enumerate(generated_results, 1):
-            apply_txt = f"[Apply Now]({r['apply_link']})" if r.get('apply_link') else "—"
+            apply_txt = f"[Apply Now]({r['apply_link']})" if r.get('apply_link') else "â€”"
             md_lines.append(f"| {idx} | {r['company']} | {r['role']} | **{r['score']}%** | `{r['filename']}` | {apply_txt} |")
         md_lines.append("")
 
         if low_score_jobs:
             md_lines.extend([
-                "## 🔍 Low Relevance Roles (Score < 60% – No Resume Generated)",
+                "## ðŸ” Low Relevance Roles (Score < 60% â€“ No Resume Generated)",
                 "",
                 "| # | Company | Role | Score | Reason | Apply Link |",
                 "|---|---------|------|-------|--------|------------|"
             ])
             for idx, lj in enumerate(low_score_jobs, 1):
-                apply_txt = f"[View Posting]({lj['apply_link']})" if lj.get('apply_link') else "—"
+                apply_txt = f"[View Posting]({lj['apply_link']})" if lj.get('apply_link') else "â€”"
                 md_lines.append(f"| {idx} | {lj['company']} | {lj['role']} | **{lj['score']}%** | {lj['reason']} | {apply_txt} |")
             md_lines.append("")
 
         if failed_links:
             md_lines.extend([
-                "## ⚠️ Failed / Inaccessible Links",
+                "## âš ï¸ Failed / Inaccessible Links",
                 ""
             ])
             for fj in failed_links:
-                md_lines.append(f"- **{fj['company']} – {fj.get('title', '')}**: {fj['error_reason']}")
+                md_lines.append(f"- **{fj['company']} â€“ {fj.get('title', '')}**: {fj['error_reason']}")
                 md_lines.append(f"  - Action: {fj.get('suggested_action', '')}")
                 md_lines.append(f"  - Link: {fj['apply_link']}")
             md_lines.append("")
@@ -848,7 +863,7 @@ def run_batch_url_pipeline(
         md_lines.append("---")
         md_lines.append(f"*Generated automatically by JobHunt Automation on {today_iso}*")
         summary_md_path.write_text("\n".join(md_lines), encoding="utf-8")
-        logger.info(f"📋 Summary MD generated: {summary_md_path}")
+        logger.info(f"ðŸ“‹ Summary MD generated: {summary_md_path}")
     except Exception as e:
         logger.error(f"Failed to generate Summary.md: {e}")
 
@@ -889,7 +904,7 @@ def run_batch_url_pipeline(
                     "job_id": j_id,
                     "status": "generated"
                 }).execute()
-            logger.info(f"💾 Synced {len(generated_results)} batch jobs to Supabase database.")
+            logger.info(f"ðŸ’¾ Synced {len(generated_results)} batch jobs to Supabase database.")
     except Exception as e:
         logger.warning(f"Supabase sync note: {e}")
 
@@ -903,7 +918,7 @@ def run_batch_url_pipeline(
         for sec_dir in secondary_dirs:
             if sec_dir.parent.exists() and sec_dir.resolve() != desktop_dir.resolve():
                 shutil.copytree(str(desktop_dir), str(sec_dir), dirs_exist_ok=True)
-                logger.info(f"🔄 Mirrored output to: {sec_dir}")
+                logger.info(f"ðŸ”„ Mirrored output to: {sec_dir}")
     except Exception as e:
         logger.warning(f"Mirroring note: {e}")
 
@@ -918,7 +933,7 @@ def run_batch_url_pipeline(
                 table_pdf_path=table_pdf_path,
                 desktop_dir=Path(desktop_base)
             )
-            logger.info(f"📦 Final Deliverable ZIP created: {zip_path}")
+            logger.info(f"ðŸ“¦ Final Deliverable ZIP created: {zip_path}")
         except Exception as ze:
             logger.error(f"Failed to package pipeline ZIP archive: {ze}")
 
@@ -935,3 +950,5 @@ def run_batch_url_pipeline(
         "summary_md": str(summary_md_path),
         "zip_path": str(zip_path)
     }
+
+

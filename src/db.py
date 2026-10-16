@@ -103,6 +103,9 @@ def save_pipeline_results(pipeline_state, shortlisted_jobs, pdf_paths, all_score
 
     cache_hit_rate = round(total_cached_tokens / total_prompt_tokens, 4) if total_prompt_tokens > 0 else 0.0
 
+    if total_tokens == 0 and (total_prompt_tokens + total_completion_tokens) > 0:
+        total_tokens = total_prompt_tokens + total_completion_tokens
+
     ai_metrics = {
         "total_cost_usd": round(total_cost, 6),
         "total_tokens": total_tokens,

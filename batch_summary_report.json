@@ -1,11 +1,68 @@
 {
-  "timestamp": "2026-10-04",
-  "total_urls": 37,
-  "parsed_count": 36,
-  "shortlisted_count": 14,
-  "low_score_count": 22,
-  "failed_count": 1,
+  "timestamp": "2026-10-14",
+  "total_urls": 39,
+  "parsed_count": 35,
+  "shortlisted_count": 17,
+  "low_score_count": 18,
+  "failed_count": 4,
   "shortlisted_jobs": [
+    {
+      "company": "Autodesk",
+      "role": "Software Development Engineer",
+      "score": 78,
+      "ats_score": 78,
+      "fit_label": "High Match",
+      "filename": "Autodesk_Software_Development_Engineer.pdf",
+      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-14\\Autodesk_Software_Development_Engineer.pdf",
+      "apply_link": "https://jobs.autodesk.com/careers/job/1443153774769",
+      "apply_type": "company_site",
+      "supabase_resume_url": "https://hysfjbecwcljddszcjui.supabase.co/storage/v1/object/public/resumes/batch_tailor/company_site/Autodesk_Software_Development_Engineer.pdf",
+      "missing_skills": [
+        "Docker",
+        "Kubernetes",
+        "AWS",
+        "CI/CD",
+        "Microservices"
+      ]
+    },
+    {
+      "company": "Jio",
+      "role": "Trainee",
+      "score": 82,
+      "ats_score": 82,
+      "fit_label": "High Match",
+      "filename": "Jio_Trainee.pdf",
+      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-14\\Jio_Trainee.pdf",
+      "apply_link": "https://careers.jio.com/frmjobdescription.aspx?JBTITLE=DiLXHUJI6Dg/PQ3ssi+vtw==&jbID=DcXUxszx9HeEmFv+Vm9yzw==&funcCode=ni4dknKJ6TY=",
+      "apply_type": "company_site",
+      "supabase_resume_url": "https://hysfjbecwcljddszcjui.supabase.co/storage/v1/object/public/resumes/batch_tailor/company_site/Jio_Trainee.pdf",
+      "missing_skills": [
+        "JSP",
+        "Servlets",
+        "Apache Tomcat",
+        "J2EE",
+        "Oracle Database"
+      ]
+    },
+    {
+      "company": "Qualcomm",
+      "role": "Freshers as Engineer",
+      "score": 72,
+      "ats_score": 72,
+      "fit_label": "Moderate Match",
+      "filename": "Qualcomm_Freshers_as_Engineer.pdf",
+      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-14\\Qualcomm_Freshers_as_Engineer.pdf",
+      "apply_link": "https://careers.qualcomm.com/careers/job/446720932239?hl=en-US&utm_source=linkedin&domain=qualcomm.com&source=APPLICANT_SOURCE-6-2",
+      "apply_type": "company_site",
+      "supabase_resume_url": "https://hysfjbecwcljddszcjui.supabase.co/storage/v1/object/public/resumes/batch_tailor/company_site/Qualcomm_Freshers_as_Engineer.pdf",
+      "missing_skills": [
+        "Embedded Systems",
+        "C/C++",
+        "Linux Kernel",
+        "RTOS",
+        "Computer Architecture"
+      ]
+    },
     {
       "company": "Honeywell",
       "role": "Honeywell Summer Internship 2026",
@@ -13,8 +70,10 @@
       "ats_score": 68,
       "fit_label": "Moderate Match",
       "filename": "Honeywell_Honeywell_Summer_Internship_2026.pdf",
-      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-04\\Honeywell_Honeywell_Summer_Internship_2026.pdf",
+      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-14\\Honeywell_Honeywell_Summer_Internship_2026.pdf",
       "apply_link": "https://ibqbjb.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/Honeywell/job/155473",
+      "apply_type": "company_site",
+      "supabase_resume_url": "https://hysfjbecwcljddszcjui.supabase.co/storage/v1/object/public/resumes/batch_tailor/company_site/Honeywell_Honeywell_Summer_Internship_2026.pdf",
       "missing_skills": [
         "Kafka",
         "Docker",
@@ -24,14 +83,16 @@
       ]
     },
     {
-      "company": "Wipro",
-      "role": "Wipro Off Campus Recruitment 2026",
+      "company": "TCS NQT for 2026 Batch Registration",
+      "role": "TCS NQT for 2026 Batch Registration",
       "score": 78,
       "ats_score": 78,
       "fit_label": "High Match",
-      "filename": "Wipro_Wipro_Off_Campus_Recruitment_2026.pdf",
-      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-04\\Wipro_Wipro_Off_Campus_Recruitment_2026.pdf",
-      "apply_link": "https://careers.wipro.com/job/ELITE_VLSI/203748-en_US/",
+      "filename": "TCS_NQT_for_2026_Batch_Registration_TCS_NQT_for_2026_Batch_Registration.pdf",
+      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-14\\TCS_NQT_for_2026_Batch_Registration_TCS_NQT_for_2026_Batch_Registration.pdf",
+      "apply_link": "https://www.tcsion.com/hub/national-qualifier-test/",
+      "apply_type": "company_site",
+      "supabase_resume_url": "https://hysfjbecwcljddszcjui.supabase.co/storage/v1/object/public/resumes/batch_tailor/company_site/TCS_NQT_for_2026_Batch_Registration_TCS_NQT_for_2026_Batch_Registration.pdf",
       "missing_skills": [
         "Kafka",
         "Docker",
@@ -42,189 +103,192 @@
     },
     {
       "company": "Infosys",
-      "role": "Infosys Off Campus Drive 2026",
+      "role": "2027 Batch",
       "score": 72,
       "ats_score": 72,
       "fit_label": "Moderate Match",
-      "filename": "Infosys_Infosys_Off_Campus_Drive_2026.pdf",
-      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-04\\Infosys_Infosys_Off_Campus_Drive_2026.pdf",
+      "filename": "Infosys_2027_Batch.pdf",
+      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-14\\Infosys_2027_Batch.pdf",
       "apply_link": "https://surveys.infosysapps.com/r/a/SEcampusregistration2027batch",
+      "apply_type": "company_site",
+      "supabase_resume_url": "https://hysfjbecwcljddszcjui.supabase.co/storage/v1/object/public/resumes/batch_tailor/company_site/Infosys_2027_Batch.pdf",
       "missing_skills": [
         "Kafka",
         "Docker",
         "Kubernetes",
         "AWS",
-        "Microservices"
+        "Microservices Architecture"
       ]
     },
     {
-      "company": "Flex",
-      "role": "Flex Recruitment 2026",
+      "company": "NTT DATA",
+      "role": "Associate Software Engineer",
+      "score": 72,
+      "ats_score": 72,
+      "fit_label": "Moderate Match",
+      "filename": "NTT_DATA_Associate_Software_Engineer.pdf",
+      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-14\\NTT_DATA_Associate_Software_Engineer.pdf",
+      "apply_link": "https://careers.nttdata.com/global/en/job/NTT1GLOBAL393358EXTERNALENGLOBAL/Associate-Software-Engineer?utm_source=linkedin&utm_medium=phenom-feeds",
+      "apply_type": "company_site",
+      "supabase_resume_url": "https://hysfjbecwcljddszcjui.supabase.co/storage/v1/object/public/resumes/batch_tailor/company_site/NTT_DATA_Associate_Software_Engineer.pdf",
+      "missing_skills": [
+        "MuleSoft",
+        "Enterprise Application Integration",
+        "Anypoint Platform",
+        "API-led Connectivity",
+        "DataWeave"
+      ]
+    },
+    {
+      "company": "Siemens Energy",
+      "role": "AI/Machine Learning Engineer",
+      "score": 72,
+      "ats_score": 72,
+      "fit_label": "Moderate Match",
+      "filename": "Siemens_Energy_AI_Machine_Learning_Engineer.pdf",
+      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-14\\Siemens_Energy_AI_Machine_Learning_Engineer.pdf",
+      "apply_link": "https://jobs.siemens-energy.com/en_US/Jobs/FolderDetail?folderId=298438&source=LinkedIn",
+      "apply_type": "company_site",
+      "supabase_resume_url": "https://hysfjbecwcljddszcjui.supabase.co/storage/v1/object/public/resumes/batch_tailor/company_site/Siemens_Energy_AI_Machine_Learning_Engineer.pdf",
+      "missing_skills": [
+        "PyTorch",
+        "TensorFlow",
+        "scikit-learn",
+        "NumPy",
+        "AWS"
+      ]
+    },
+    {
+      "company": "PWC",
+      "role": "Associate Data Science Job Opening",
+      "score": 68,
+      "ats_score": 68,
+      "fit_label": "Moderate Match",
+      "filename": "PWC_Associate_Data_Science_Job_Opening.pdf",
+      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-14\\PWC_Associate_Data_Science_Job_Opening.pdf",
+      "apply_link": "http://pwc.wd3.myworkdayjobs.com/en-US/Global_Experienced_Careers/job/IN-Senior-Associate-AI-Architect-Data-and-Analytics-Advisory-Bangalore_758023WD-1",
+      "apply_type": "company_site",
+      "supabase_resume_url": "https://hysfjbecwcljddszcjui.supabase.co/storage/v1/object/public/resumes/batch_tailor/company_site/PWC_Associate_Data_Science_Job_Opening.pdf",
+      "missing_skills": [
+        "PyTorch",
+        "TensorFlow",
+        "Hugging Face Transformers",
+        "FAISS",
+        "Pinecone"
+      ]
+    },
+    {
+      "company": "VISA",
+      "role": "Freshers as Software Engineer",
+      "score": 88,
+      "ats_score": 88,
+      "fit_label": "High Match",
+      "filename": "VISA_Freshers_as_Software_Engineer.pdf",
+      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-14\\VISA_Freshers_as_Software_Engineer.pdf",
+      "apply_link": "https://visa.wd5.myworkdayjobs.com/Visa/job/IN---Bengaluru-India/SW-Engineer_REF087844W/",
+      "apply_type": "company_site",
+      "supabase_resume_url": "https://hysfjbecwcljddszcjui.supabase.co/storage/v1/object/public/resumes/batch_tailor/company_site/VISA_Freshers_as_Software_Engineer.pdf",
+      "missing_skills": [
+        "DB2",
+        "Kubernetes",
+        "NoSQL databases",
+        "Angular",
+        "C++"
+      ]
+    },
+    {
+      "company": "Cisco",
+      "role": "Freshers as Software Engineer Trainee",
+      "score": 78,
+      "ats_score": 78,
+      "fit_label": "High Match",
+      "filename": "Cisco_Freshers_as_Software_Engineer_Trainee.pdf",
+      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-14\\Cisco_Freshers_as_Software_Engineer_Trainee.pdf",
+      "apply_link": "https://careers.cisco.com/global/en/job/CISCISGLOBAL2014481EXTERNALENGLOBAL/Software-Engineer-Trainee-Technical-Graduate-Apprentice-India-UHR",
+      "apply_type": "company_site",
+      "supabase_resume_url": "https://hysfjbecwcljddszcjui.supabase.co/storage/v1/object/public/resumes/batch_tailor/company_site/Cisco_Freshers_as_Software_Engineer_Trainee.pdf",
+      "missing_skills": [
+        "Docker",
+        "Kubernetes",
+        "Jenkins",
+        "AWS",
+        "CI/CD Pipelines"
+      ]
+    },
+    {
+      "company": "Ford Motor Company\ud83d\udcbc Role: Software Engineer",
+      "role": "Software Engineer",
+      "score": 88,
+      "ats_score": 88,
+      "fit_label": "High Match",
+      "filename": "Ford_Motor_Company__Role__Software_Engin_Software_Engineer.pdf",
+      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-14\\Ford_Motor_Company__Role__Software_Engin_Software_Engineer.pdf",
+      "apply_link": "https://www.careers.ford.com/en/job/-/-/48560/101714131408",
+      "apply_type": "company_site",
+      "supabase_resume_url": "https://hysfjbecwcljddszcjui.supabase.co/storage/v1/object/public/resumes/batch_tailor/company_site/Ford_Motor_Company__Role__Software_Engin_Software_Engineer.pdf",
+      "missing_skills": [
+        "Kafka",
+        "Angular",
+        "PostgreSQL",
+        "Spring Data JPA",
+        "SOLID Principles"
+      ]
+    },
+    {
+      "company": "Equifax\ud83d\udcbc Role: Technology Engineering Trainee",
+      "role": "Technology Engineering Trainee \u2013 Entry",
       "score": 82,
       "ats_score": 82,
       "fit_label": "High Match",
-      "filename": "Flex_Flex_Recruitment_2026.pdf",
-      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-04\\Flex_Flex_Recruitment_2026.pdf",
-      "apply_link": "https://flextronics.wd1.myworkdayjobs.com/Careers/job/India-Chennai/Associate-Software-Engineer_WD230583",
+      "filename": "Equifax__Role__Technology_Engineering_Tr_Technology_Engineering_Trainee___Entry.pdf",
+      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-14\\Equifax__Role__Technology_Engineering_Tr_Technology_Engineering_Trainee___Entry.pdf",
+      "apply_link": "https://careers.equifax.com/en/jobs/j00179225/technology-engineering-trainee-entry/",
+      "apply_type": "company_site",
+      "supabase_resume_url": "https://hysfjbecwcljddszcjui.supabase.co/storage/v1/object/public/resumes/batch_tailor/company_site/Equifax__Role__Technology_Engineering_Tr_Technology_Engineering_Trainee___Entry.pdf",
       "missing_skills": [
-        "Computer Networks",
-        "Operating Systems",
-        "SDLC",
-        "Cloud Computing",
-        "Data Analytics"
-      ]
-    },
-    {
-      "company": "AccioJob Placement Records",
-      "role": "Software Developer",
-      "score": 78,
-      "ats_score": 78,
-      "fit_label": "High Match",
-      "filename": "AccioJob_Placement_Records_Software_Developer.pdf",
-      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-04\\AccioJob_Placement_Records_Software_Developer.pdf",
-      "apply_link": "https://go.acciojob.com/ebFbqy",
-      "missing_skills": [
-        "Kafka",
-        "Kubernetes",
-        "GraphQL",
+        "Angular",
+        "Terraform",
+        "Jenkins",
         "AWS",
-        "Redis"
-      ]
-    },
-    {
-      "company": "HPE (Hewlett Packard Enterprise)",
-      "role": "Graduate Software Engineer",
-      "score": 78,
-      "ats_score": 78,
-      "fit_label": "High Match",
-      "filename": "HPE__Hewlett_Packard_Enterprise_Graduate_Software_Engineer.pdf",
-      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-04\\HPE__Hewlett_Packard_Enterprise_Graduate_Software_Engineer.pdf",
-      "apply_link": "https://careers.hpe.com/",
-      "missing_skills": [
-        "Operating Systems",
-        "Compiler Design",
-        "Computer Networking",
-        "Kafka",
         "Docker"
       ]
     },
     {
-      "company": "Accenture",
-      "role": "AI/ML Computational Science Associate",
+      "company": "Autodesk\ud83d\udcbc Role: Software Development Engineer (Java, AWS)",
+      "role": "Software Development Engineer (Java, AWS)",
       "score": 88,
       "ats_score": 88,
       "fit_label": "High Match",
-      "filename": "Accenture_AI_ML_Computational_Science_Associate.pdf",
-      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-04\\Accenture_AI_ML_Computational_Science_Associate.pdf",
-      "apply_link": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01665345_en",
+      "filename": "Autodesk__Role__Software_Development_Eng_Software_Development_Engineer__Java__AWS.pdf",
+      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-14\\Autodesk__Role__Software_Development_Eng_Software_Development_Engineer__Java__AWS.pdf",
+      "apply_link": "https://jobs.autodesk.com/careers/job/1443153774769",
+      "apply_type": "company_site",
+      "supabase_resume_url": "https://hysfjbecwcljddszcjui.supabase.co/storage/v1/object/public/resumes/batch_tailor/company_site/Autodesk__Role__Software_Development_Eng_Software_Development_Engineer__Java__AWS.pdf",
       "missing_skills": [
-        "Docker",
-        "Kubernetes",
-        "AWS",
-        "Apache Spark",
-        "Airflow"
-      ]
-    },
-    {
-      "company": "IBM",
-      "role": "Associate System Engineer",
-      "score": 72,
-      "ats_score": 72,
-      "fit_label": "Moderate Match",
-      "filename": "IBM_Associate_System_Engineer.pdf",
-      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-04\\IBM_Associate_System_Engineer.pdf",
-      "apply_link": "https://careers.ibm.com/en_US/careers/JobDetail?jobId=135462&source=WEB_Search_INDIA",
-      "missing_skills": [
-        "watsonx Orchestrate",
-        "watsonx Assistant",
-        "Watson APIs",
-        "RPA",
-        "IDCP"
-      ]
-    },
-    {
-      "company": "Cognizant",
-      "role": "Jr. Software Engineer",
-      "score": 88,
-      "ats_score": 88,
-      "fit_label": "High Match",
-      "filename": "Cognizant_Jr__Software_Engineer.pdf",
-      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-04\\Cognizant_Jr__Software_Engineer.pdf",
-      "apply_link": "https://careers.cognizant.com/global-en/jobs/00068949144/jr-software-engineer/?source=JB-17840",
-      "missing_skills": [
-        "Kafka",
-        "Docker",
-        "Kubernetes",
-        "GraphQL",
-        "Redis"
-      ]
-    },
-    {
-      "company": "Zebra Technologies",
-      "role": "Software Engineer, I",
-      "score": 82,
-      "ats_score": 82,
-      "fit_label": "High Match",
-      "filename": "Zebra_Technologies_Software_Engineer__I.pdf",
-      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-04\\Zebra_Technologies_Software_Engineer__I.pdf",
-      "apply_link": "https://zebra.wd501.myworkdayjobs.com/Zebra_careers/job/Pune-India/Software-Engineer--I_JR103443-1",
-      "missing_skills": [
-        "Google Cloud Platform (GCP)",
-        "CI/CD Pipelines",
-        "Docker",
-        "System Design",
-        "Kubernetes"
-      ]
-    },
-    {
-      "company": "Global Payments",
-      "role": "Software Engineer",
-      "score": 82,
-      "ats_score": 82,
-      "fit_label": "High Match",
-      "filename": "Global_Payments_Software_Engineer.pdf",
-      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-04\\Global_Payments_Software_Engineer.pdf",
-      "apply_link": "https://jobs.globalpayments.com/jobs/R0073884-0",
-      "missing_skills": [
-        "Go",
-        "C++",
-        "Angular",
-        "Oracle",
-        "z/OS"
-      ]
-    },
-    {
-      "company": "LSEG (London Stock Exchange Group)1\ufe0f\u20e3 Business Graduate Prog",
-      "role": "LSEG Business Graduate Programme 2026",
-      "score": 68,
-      "ats_score": 68,
-      "fit_label": "Moderate Match",
-      "filename": "LSEG__London_Stock_Exchange_Group_1___Bu_LSEG_Business_Graduate_Programme_2026.pdf",
-      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-04\\LSEG__London_Stock_Exchange_Group_1___Bu_LSEG_Business_Graduate_Programme_2026.pdf",
-      "apply_link": "https://lseg.wd3.myworkdayjobs.com/Graduate_Careers/job/IND-BLR-Divyasree-Technopolis/Business-Graduate-Associate--Data---Analytics-_R0123974",
-      "missing_skills": [
-        "Financial Markets Knowledge",
-        "Corporate Finance",
-        "Equities and Bonds",
-        "Derivatives",
-        "Business Intelligence Tools"
-      ]
-    },
-    {
-      "company": "Virtusa",
-      "role": "Infra Mgmt Associate (Java)",
-      "score": 72,
-      "ats_score": 72,
-      "fit_label": "Moderate Match",
-      "filename": "Virtusa_Infra_Mgmt_Associate__Java.pdf",
-      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-04\\Virtusa_Infra_Mgmt_Associate__Java.pdf",
-      "apply_link": "https://www.virtusa.com/careers/job-search/global/en/job/VIRVIRGLOBALCREQ261469EXTERNALENGLOBAL/Junior-Associate",
-      "missing_skills": [
-        "Kafka",
-        "Kubernetes",
+        "AWS (S3, SQS, DynamoDB, Lambda, IAM)",
         "Terraform",
-        "Ansible",
-        "AWS"
+        "Apache Flink",
+        "CI/CD pipelines",
+        "Microservices architecture"
+      ]
+    },
+    {
+      "company": "Larsen & Toubro\ud83d\udcbc Role: Engineer Trainee\ud83d\udccd Location: Chennai\ud83d\udcb0",
+      "role": "Engineer Trainee\ud83d\udccd Location: Chennai\ud83d\udcb0 Salary: Not disclosed (no reliable data yet",
+      "score": 78,
+      "ats_score": 78,
+      "fit_label": "High Match",
+      "filename": "Larsen___Toubro__Role__Engineer_Trainee__Engineer_Trainee__Location__Chennai__Sal.pdf",
+      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-14\\Larsen___Toubro__Role__Engineer_Trainee__Engineer_Trainee__Location__Chennai__Sal.pdf",
+      "apply_link": "https://larsentoubrocareers.peoplestrong.com/job/detail/LNT_ET_1891936",
+      "apply_type": "company_site",
+      "supabase_resume_url": "https://hysfjbecwcljddszcjui.supabase.co/storage/v1/object/public/resumes/batch_tailor/company_site/Larsen___Toubro__Role__Engineer_Trainee__Engineer_Trainee__Location__Chennai__Sal.pdf",
+      "missing_skills": [
+        "GraphQL",
+        "Angular",
+        "TensorFlow",
+        "PyTorch",
+        "OpenCV"
       ]
     },
     {
@@ -234,8 +298,10 @@
       "ats_score": 78,
       "fit_label": "High Match",
       "filename": "HCLTech_Mega_Off-Campus_HCLTech_Mega_Off-Campus_Drive_2026___Gra.pdf",
-      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-04\\HCLTech_Mega_Off-Campus_HCLTech_Mega_Off-Campus_Drive_2026___Gra.pdf",
+      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-14\\HCLTech_Mega_Off-Campus_HCLTech_Mega_Off-Campus_Drive_2026___Gra.pdf",
       "apply_link": "https://www.hcltech.com/careers",
+      "apply_type": "company_site",
+      "supabase_resume_url": "https://hysfjbecwcljddszcjui.supabase.co/storage/v1/object/public/resumes/batch_tailor/company_site/HCLTech_Mega_Off-Campus_HCLTech_Mega_Off-Campus_Drive_2026___Gra.pdf",
       "missing_skills": [
         "Kafka",
         "Docker",
@@ -243,50 +309,75 @@
         "AWS",
         "Microservices"
       ]
+    },
+    {
+      "company": "IBM India Systems Development Lab (ISDL)\ud83d\udcbc Role: Software Eng",
+      "role": "Software Engineer\ud83d\udccd Location: Hyderabad / Pune / Bangalore (Hybrid)\ud83d\udcb0 Salary: Not",
+      "score": 62,
+      "ats_score": 62,
+      "fit_label": "Moderate Match",
+      "filename": "IBM_India_Systems_Development_Lab__ISDL__Software_Engineer__Location__Hyderabad__.pdf",
+      "filepath": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-14\\IBM_India_Systems_Development_Lab__ISDL__Software_Engineer__Location__Hyderabad__.pdf",
+      "apply_link": "https://www.ibm.com/careers/",
+      "apply_type": "company_site",
+      "supabase_resume_url": "https://hysfjbecwcljddszcjui.supabase.co/storage/v1/object/public/resumes/batch_tailor/company_site/IBM_India_Systems_Development_Lab__ISDL__Software_Engineer__Location__Hyderabad__.pdf",
+      "missing_skills": [
+        "C++",
+        "Linux kernel internals",
+        "Kubernetes",
+        "Go",
+        "TensorFlow/PyTorch"
+      ]
     }
   ],
   "low_score_jobs": [
     {
-      "company": "GE HealthCare",
-      "role": "Early Career Trainee - Service",
+      "company": "Virtusa",
+      "role": "Associate \u2013 Software Tester",
       "score": 18,
-      "reason": "Field service engineering role requiring EEE/ECE hardware, not software development.",
-      "apply_link": "https://careers.gehealthcare.com/global/en/job/R4046659/Early-Career-Trainee-Service",
+      "reason": "Primarily QA testing role, explicitly penalized; candidate targets development, not testing positions.",
+      "apply_link": "https://www.virtusa.com/careers/job-search/global/en/job/VIRVIRGLOBALCREQ261732EXTERNALENGLOBAL/Associate",
       "missing_skills": [
-        "Biomedical imaging equipment servicing",
-        "Electronics and Electrical engineering hardware",
-        "Preventive maintenance procedures",
-        "Field Modification Instructions (FMI) documentation",
-        "Multi-modality imaging system troubleshooting"
+        "Selenium WebDriver",
+        "TestNG",
+        "JUnit",
+        "Cucumber",
+        "Jenkins"
       ]
     },
     {
-      "company": "GE Healthcare",
-      "role": "GE Healthcare Recruitment for 2026 Batch",
-      "score": 22,
-      "reason": "Field service role for EEE/ECE electronics, not software development; mismatched discipline.",
-      "apply_link": "https://careers.gehealthcare.com/global/en/job/GEVGHLGLOBALR4046659EXTERNALENGLOBAL/Early-Career-Trainee-Service?utm_source=linkedin&utm_medium=phenom-feeds",
+      "company": "MHTECHIN",
+      "role": "Data Analyst",
+      "score": 42,
+      "reason": "Data analyst role needs BI dashboards, statistics, ETL; candidate lacks these core skills.",
+      "apply_link": "https://careers.mhtechin.com/index.php/2026/08/13/mhtechin-real-or-fake-the-complete-2025-investigation-official-notice/",
       "missing_skills": [
-        "Electrical Engineering",
-        "Electronics Engineering",
-        "Biomedical Imaging Equipment",
-        "Field Service Maintenance",
-        "Hardware Troubleshooting"
+        "Tableau",
+        "Power BI",
+        "Looker",
+        "A/B Testing",
+        "Snowflake"
       ]
     },
     {
-      "company": "Sutherland",
-      "role": "Sutherland Walk-in Drive 2026",
-      "score": 5,
-      "reason": "Non-technical customer service role, unrelated to candidate's software engineering skills and targets.",
-      "apply_link": "https://www.naukri.com/job-listings-hiring-for-non-voice-customer-service-executive-sutherland-chennai-0-to-0-years-070926031143?src=cluster&sid=17907688478357174_4&xp=1&px=4",
-      "missing_skills": []
+      "company": "Apple",
+      "role": "Web Accessibility engineer",
+      "score": 48,
+      "reason": "Web accessibility role, not core Java, MERN, or AI development target.",
+      "apply_link": "https://jobs.apple.com/en-us/details/200680624-1052/web-accessibility-engineer",
+      "missing_skills": [
+        "WCAG accessibility standards",
+        "ARIA",
+        "Screen reader testing",
+        "axe DevTools",
+        "NVDA/JAWS"
+      ]
     },
     {
       "company": "Wipro",
-      "role": "Wipro Recruitment 2026",
-      "score": 8,
-      "reason": "Non-IT finance management trainee role, unrelated to candidate's software engineering targets.",
+      "role": "Management Trainee",
+      "score": 12,
+      "reason": "Non-IT finance FP&A role, unrelated to candidate's software engineering skills and targets",
       "apply_link": "https://careers.wipro.com/job/Management-Trainee/182946-en_US",
       "missing_skills": [
         "Financial Planning & Analysis (FP&A)",
@@ -297,265 +388,227 @@
       ]
     },
     {
-      "company": "JPMorgan Chase",
-      "role": "JPMorgan Chase Recruitment 2026",
-      "score": 45,
-      "reason": "Product analyst role, non-technical; candidate targets software engineering, lacks analytics and JIRA.",
-      "apply_link": "https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/210792146",
+      "company": "Micron Technology",
+      "role": "Associate Engineer, IT Eng System Mgr",
+      "score": 58,
+      "reason": "IT infrastructure support role; candidate lacks Linux, Windows, Ansible, Kubernetes, monitoring tools.",
+      "apply_link": "https://micron.eightfold.ai/careers/job/44712324?domain=micron.com&hl=en",
       "missing_skills": [
-        "JIRA",
-        "Product Management",
-        "Business Analysis",
-        "Incentive Compensation",
-        "Analytics Tools"
+        "Ansible",
+        "Kubernetes/OpenShift",
+        "Zabbix",
+        "Red Hat Satellite",
+        "Jenkins"
       ]
     },
     {
-      "company": "HCL",
-      "role": "HCL Recruitment for 2026 Batch",
-      "score": 5,
-      "reason": "Non-technical BPO process associate role; candidate ineligible as B.E. graduate.",
-      "apply_link": "https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=N-edGDrJWk-LaG9MqZQZEjMyU26NbD5BgSc_JO7O4FVUOE0yODdaUE5EV0JCN0NUWFFOUFUxSjBaMC4u",
-      "missing_skills": []
+      "company": "GlobalLogic",
+      "role": "GlobalLogic Recruitment 2026",
+      "score": 28,
+      "reason": "Non-technical data mapping analyst role, misaligned with candidate's software engineering targets.",
+      "apply_link": "https://www.globallogic.com/careers/associate-analyst-freshers-non-technical-non-voice-irc300388/?utm_source=LinkedIn&utm_medium=jobboard&utm_campaign=career",
+      "missing_skills": [
+        "GIS/Mapping Tools",
+        "Geospatial Data Analysis",
+        "Map Data Validation",
+        "Navigation Systems Knowledge",
+        "Rotational Shift Flexibility"
+      ]
     },
     {
-      "company": "Accenture",
-      "role": "Accenture Off Campus Drive 2026",
+      "company": "DXC Technology",
+      "role": "DXC Technology Recruitment 2026",
+      "score": 58,
+      "reason": "Data engineering role, candidate has Python SQL pipelines but lacks ETL and cloud data tools.",
+      "apply_link": "https://careers.dxc.com/job/23858129/analyst-i-data-engineering-hyderabad-in/?source=DXCCompany-CareerSite",
+      "missing_skills": [
+        "Apache Spark",
+        "Apache Airflow",
+        "ETL Pipelines",
+        "Google Cloud Platform",
+        "Data Warehousing"
+      ]
+    },
+    {
+      "company": "Ernst & Young",
+      "role": "Associate Analyst",
+      "score": 15,
+      "reason": "Finance risk compliance role, not software engineering; BBA/B.Com preferred, mismatched technical profile.",
+      "apply_link": "https://careers.ey.com/ey/job/Kochi-Associate-Analyst-USRM-Enablement-KL-682303/1424177133/",
+      "missing_skills": [
+        "Risk Management Tools",
+        "Compliance Frameworks",
+        "Financial Analysis",
+        "MS Excel (Advanced)",
+        "Audit Procedures"
+      ]
+    },
+    {
+      "company": "Virtusa",
+      "role": "Freshers as Associate Software Testers",
       "score": 12,
-      "reason": "SAP Oil & Gas support role, requires 2+ years experience, mismatched fresher profile.",
-      "apply_link": "https://www.accenture.com/in-en/careers/jobdetails?id=ATCI-5698137-S2060429_en",
+      "reason": "Manual mobile QA tester role, explicitly outside candidate's backend and AI target scope.",
+      "apply_link": "https://www.virtusa.com/careers/job-search/global/en/job/VIRVIRGLOBALCREQ261732EXTERNALENGLOBAL/Associate?utm_source=linkedin&utm_medium=phenom-feeds&source=taleo",
       "missing_skills": [
-        "SAP for Oil & Gas Downstream",
-        "SAP modules (SD/MM/FI)",
-        "Incident management tools",
-        "Application monitoring tools",
-        "Enterprise support experience"
+        "Appium",
+        "Android Studio",
+        "iOS Testing",
+        "JIRA",
+        "Mobile Test Automation"
       ]
     },
     {
-      "company": "Tata Communications",
-      "role": "Tata Communications Off Campus Drive 2026",
-      "score": 38,
-      "reason": "Cybersecurity operations role, not aligned with Java, MERN, or AI development targets.",
-      "apply_link": "https://jobs.tatacommunications.com/jobs/9447746125?channel=TGlua2VkSW4=",
+      "company": "HCLTech",
+      "role": "Field Sales Intern \u2013 PM Internship Scheme",
+      "score": 8,
+      "reason": "Non-technical field sales internship, unrelated to candidate's software engineering target roles.",
+      "apply_link": "mailto:divya.g@hcltech.com",
       "missing_skills": [
-        "LogRhythm",
-        "SIEM",
-        "Incident Response",
-        "Endpoint Security",
-        "IT Operations"
+        "Salesforce CRM",
+        "Lead Generation",
+        "Salesforce",
+        "HubSpot",
+        "Business Development"
       ]
     },
     {
       "company": "Amazon WFH",
-      "role": "Amazon WFH Jobs 2026",
+      "role": "Associate, ML Data Operations, GO-AI Operations",
       "score": 15,
-      "reason": "Non-technical video data annotation role, mismatched with candidate's software engineering skills.",
+      "reason": "Non-technical video auditing operations role, not software engineering or development.",
       "apply_link": "https://www.amazon.jobs/en/jobs/3134253/associate-ml-data-operations-go-ai-operations",
       "missing_skills": [
         "Video Annotation Tools",
-        "Image Auditing Software",
         "Data Labeling Platforms",
-        "Rotational Shift Adaptability",
-        "Non-technical Operations Experience"
+        "Image/Video Auditing Software",
+        "Rotational Shift Operations",
+        "Fulfillment Center Domain Knowledge"
       ]
     },
     {
-      "company": "Amazon",
-      "role": "Amazon Off Campus Drive 2026",
+      "company": "Infosys",
+      "role": "Senior Process Executive",
       "score": 8,
-      "reason": "Non-technical warehouse operations role, unrelated to software engineering or candidate's skills.",
-      "apply_link": "https://www.amazon.jobs/en/jobs/10435135/process-assistant-fcd?cmpid=SPLICX0248M&utm_source=linkedin.com&utm_campaign=cxro&utm_medium=social_media&utm_content=job_posting&ss=paid",
+      "reason": "Non-technical BPO fraud dispute role, mismatched with software engineering fresher targets.",
+      "apply_link": "https://www.linkedin.com/jobs/view/4476273828/",
       "missing_skills": [
-        "Warehouse Operations Management",
-        "Inventory Management Systems",
-        "4M and 5S Audit Procedures",
-        "Physical Logistics Handling",
-        "Shift Leadership"
+        "Card Dispute Processing",
+        "Chargeback Reason Codes",
+        "Mastercom Platform",
+        "Payment Network Rules",
+        "Fraud Investigation"
       ]
     },
     {
-      "company": "Amazon Work From Home",
-      "role": "Amazon Work From Home Hiring Freshers for Associate",
-      "score": 15,
-      "reason": "Non-technical operations associate role, no coding; mismatches candidate's software engineering targets.",
-      "apply_link": "https://www.amazon.jobs/en/jobs/10543815/ctk-svc-associate",
+      "company": "SONY",
+      "role": "SONY Internship 2026",
+      "score": 58,
+      "reason": "Python and LLM skills align, but lacks core ML frameworks and data science depth.",
+      "apply_link": "https://www.linkedin.com/jobs/view/4478080141/",
       "missing_skills": [
-        "Kafka",
-        "AWS",
-        "Docker",
-        "Kubernetes",
-        "GraphQL"
+        "PyTorch",
+        "TensorFlow",
+        "Scikit-learn",
+        "PySpark",
+        "Apache Arrow"
       ]
     },
     {
-      "company": "Capgemini",
-      "role": "SAP SD / MM / FICO / PM-EM HANA Lead + S/4HANA Public Cloud Solution Architect L",
+      "company": "HCLTech",
+      "role": "Process Associate Jobs for Freshers",
       "score": 5,
-      "reason": "SAP Lead role requires 4-15 years; fresher ineligible, out-of-scope SAP stack.",
-      "apply_link": "https://join.capgemini.com/us/en/event/6ab0d642707cc1a141c4a6f0/SAP-S-4HANA-Public-Cloud-Virtual-Recruitment-Drive-on-3-October-2026",
+      "reason": "Non-technical customer support role; B.Tech candidates explicitly ineligible for this drive.",
+      "apply_link": "http://naukri.com/job-listings-voice-non-voice-process-hcltech-chennai-0-to-0-years-040926028104?src=cluster&sid=17917873269336080_3&xp=1&px=1",
+      "missing_skills": []
+    },
+    {
+      "company": "Hexaware",
+      "role": "Freshers as International Voice Process Executive",
+      "score": 8,
+      "reason": "Non-technical voice support role, unrelated to candidate's software engineering skills.",
+      "apply_link": "https://www.naukri.com/job-listings-international-voice-process-executive-hexaware-technologies-chennai-0-to-5-years-071026029366?src=cluster&sid=17916043503665594_8&xp=6&px=1",
       "missing_skills": [
-        "SAP S/4HANA",
-        "SAP SD",
-        "SAP MM",
-        "SAP FICO",
-        "SAP BTP"
+        "International Voice Support",
+        "Customer Service",
+        "Call Handling",
+        "Rotational Shift Work",
+        "Typing Speed Certification"
       ]
     },
     {
-      "company": "Deloitte",
-      "role": "Analyst",
-      "score": 22,
-      "reason": "ITSM process governance role, not software development; candidate targets coding roles.",
-      "apply_link": "https://southasiacareers.deloitte.com/job/Bengaluru-Analyst-ITSM-Bengaluru-Technology-Strategy-&-Transformation/58839944/",
-      "missing_skills": [
-        "ITIL 4 Foundation",
-        "ServiceNow",
-        "ITSM tool configuration",
-        "SLA management",
-        "Power BI"
-      ]
-    },
-    {
-      "company": "Coforge",
-      "role": "Coforge Hiring 2026",
-      "score": 5,
-      "reason": "Non-technical US tax calling voice role, unrelated to candidate's software engineering targets.",
-      "apply_link": "https://www.naukri.com/job-listings-tax-calling-remote-voice-virtual-drive-coforge-bengaluru-1-to-3-years-120826023556",
-      "missing_skills": [
-        "US Tax Calling",
-        "Netronline",
-        "Escrow Processing",
-        "US Mortgage Operations",
-        "Property Tax Certification"
-      ]
-    },
-    {
-      "company": "Cognizant",
-      "role": "Java Developer",
-      "score": 42,
-      "reason": "Lead Developer role requiring AWS and experience, not fresher-suitable despite Java Python fit.",
+      "company": "Cognizant\ud83d\udcbc Role: Java Developer\ud83d\udccd Location: Chennai",
+      "role": "Java Developer\ud83d\udccd Location: Chennai",
+      "score": 35,
+      "reason": "Lead Developer role requiring AWS, Kubernetes, vulnerability management; not fresher-suitable.",
       "apply_link": "https://careers.cognizant.com/india-en/jobs/00070527821/java-developer-aws/",
       "missing_skills": [
-        "AWS",
+        "AWS services",
         "Kubernetes",
-        "CI/CD",
         "Vulnerability Management",
-        "Big Data"
+        "CI/CD pipelines",
+        "Big Data & Distributed Systems"
       ]
     },
     {
-      "company": "ATAIN",
-      "role": "Customer Service Executive",
-      "score": 8,
-      "reason": "Non-technical BPO voice process role, unrelated to candidate's software engineering targets.",
-      "apply_link": "https://www.naukri.com/job-listings-mega-virtual-drive-for-freshers-experienced-gurugram-location-atain-new-delhi-gurugram-delhi-ncr-0-to-2-years-011026036770",
-      "missing_skills": [
-        "Banking domain knowledge",
-        "Voice process experience",
-        "Telecalling",
-        "CRM tools",
-        "Hindi call centre experience"
-      ]
+      "company": "Tata Consultancy Services (BPS)\ud83d\udcbc Role: Back Office Operation",
+      "role": "Back Office Operations \u2013 Data Processing\ud83d\udccd Location: Bengaluru\ud83d\udcb0 Salary: Not discl",
+      "score": 5,
+      "reason": "Non-technical BPS back office role, excludes CS/IT graduates, mismatched with engineering candidate.",
+      "apply_link": "https://nextstep.tcs.com/campus/#/",
+      "missing_skills": []
     },
     {
-      "company": "GE HealthCare",
-      "role": "Trainee Engineer (Embedded Firmware)",
-      "score": 12,
-      "reason": "Embedded firmware role requires EEE/ECE degree, Embedded C, RTOS, MATLAB; candidate is IT.",
-      "apply_link": "https://careers.gehealthcare.com/global/en/job/GEVGHLGLOBALR4046876EXTERNALENGLOBAL/Trainee-Engineer",
+      "company": "HARMAN International\ud83d\udcbc Role: Intern",
+      "role": "Intern",
+      "score": 28,
+      "reason": "Embedded C/C++ Linux RTOS role; candidate lacks embedded systems and automotive experience.",
+      "apply_link": "https://jobsearch.harman.com/en_US/careers/JobDetail/Intern/33030",
       "missing_skills": [
-        "Embedded C",
-        "RTOS",
-        "MATLAB/Simulink",
-        "Microcontroller/DSP firmware",
-        "Control systems (PID, Bode/Nyquist)"
-      ]
-    },
-    {
-      "company": "LSEG Content Analyst 2026",
-      "role": "LSEG Content Analyst 2026",
-      "score": 12,
-      "reason": "Non-coding finance data operations role, mismatched with software engineering target roles.",
-      "apply_link": "https://lseg.wd3.myworkdayjobs.com/Careers/job/IND-BLR-Divyasree-Technopolis/Content-Analyst_R0123349",
-      "missing_skills": [
-        "Financial Markets Knowledge",
-        "Equities Trading",
-        "Corporate Actions",
-        "Refinitiv Workspace/Eikon",
-        "Advanced Excel (Pivot Tables, Lookups)"
-      ]
-    },
-    {
-      "company": "NTT DATA Associate DevOps Engineer 2026",
-      "role": "NTT DATA Associate DevOps Engineer 2026",
-      "score": 58,
-      "reason": "Entry DevOps role leans analyst; candidate lacks CI/CD, Jenkins, Docker depth.",
-      "apply_link": "https://careers.nttdata.com/global/en/job/NTT1GLOBALR147043EXTERNALENGLOBAL/Associate-DevOps-Engineer",
-      "missing_skills": [
-        "CI/CD Pipelines",
-        "Jenkins",
-        "GitHub Actions",
-        "Kubernetes",
-        "AWS"
-      ]
-    },
-    {
-      "company": "NTT",
-      "role": "NTT Off Campus Drive 2026",
-      "score": 38,
-      "reason": "Networking L1 support role, lacks CCNA; candidate targets software development not network ops.",
-      "apply_link": "https://careers.nttdata.com/global/en/job/NTT1GLOBALR119561EXTERNALENGLOBAL/MS-Engineer-L1",
-      "missing_skills": [
-        "CCNA Certification",
-        "Cisco Routing & Switching",
-        "BGP/OSPF/EIGRP Protocols",
-        "Palo Alto/Fortinet Firewalls",
-        "Network Monitoring Tools"
-      ]
-    },
-    {
-      "company": "Accenture",
-      "role": "R2R Ops New Associate",
-      "score": 8,
-      "reason": "Finance operations role requiring BCom/MCom; candidate is B.E. IT, non-technical mismatch.",
-      "apply_link": "https://www.accenture.com/in-en/careers/jobdetails?id=AIOC-S01668611_en",
-      "missing_skills": [
-        "Record to Report (R2R)",
-        "Financial Analysis",
-        "Account and Bank Reconciliations",
-        "Financial Ratio Analysis",
-        "Accounting Fundamentals"
-      ]
-    },
-    {
-      "company": "Citi",
-      "role": "Banking",
-      "score": 15,
-      "reason": "Investment banking analytics apprenticeship, not software engineering; finance domain mismatch for tech candidate.",
-      "apply_link": "https://jobs.citi.com/job/mumbai/banking-young-apprentice-c00/287/101394290160",
-      "missing_skills": [
-        "Investment Banking Valuation",
-        "Financial Modeling",
-        "Comparable Company Analysis",
-        "Accounting/Financial Statements",
-        "Equity Research"
+        "C",
+        "C++",
+        "Embedded RTOS",
+        "Linux system programming",
+        "CAN bus"
       ]
     }
   ],
   "failed_links": [
     {
-      "url": "https://russell.wd5.myworkdayjobs.com/russellinvestments/job/Mumbai/Graduate-Trainee--Apprentice---Global-Technology_R-04197",
+      "url": "https://freshersrecruitment.co.in/category/2027-batch-jobs/",
       "company": "Unknown Company",
       "title": "Link",
-      "apply_link": "https://russell.wd5.myworkdayjobs.com/russellinvestments/job/Mumbai/Graduate-Trainee--Apprentice---Global-Technology_R-04197",
-      "error_reason": "Could not locate job description content block in page or dynamic render.",
+      "apply_link": "https://freshersrecruitment.co.in/category/2027-batch-jobs/",
+      "error_reason": "Category / listing archive link (contains multiple job posts instead of a single JD).",
+      "suggested_action": "Category listing or dynamic portal. Open link directly or paste JD into Manual Tailor."
+    },
+    {
+      "url": "https://freshersrecruitment.co.in/category/2026-batch-jobs/",
+      "company": "Unknown Company",
+      "title": "Link",
+      "apply_link": "https://freshersrecruitment.co.in/category/2026-batch-jobs/",
+      "error_reason": "Category / listing archive link (contains multiple job posts instead of a single JD).",
+      "suggested_action": "Category listing or dynamic portal. Open link directly or paste JD into Manual Tailor."
+    },
+    {
+      "url": "https://freshersrecruitment.co.in/category/2025-batch-jobs/",
+      "company": "Unknown Company",
+      "title": "Link",
+      "apply_link": "https://freshersrecruitment.co.in/category/2025-batch-jobs/",
+      "error_reason": "Category / listing archive link (contains multiple job posts instead of a single JD).",
+      "suggested_action": "Category listing or dynamic portal. Open link directly or paste JD into Manual Tailor."
+    },
+    {
+      "url": "https://freshersrecruitment.co.in/category/2024-batch-jobs/",
+      "company": "Unknown Company",
+      "title": "Link",
+      "apply_link": "https://freshersrecruitment.co.in/category/2024-batch-jobs/",
+      "error_reason": "Category / listing archive link (contains multiple job posts instead of a single JD).",
       "suggested_action": "Category listing or dynamic portal. Open link directly or paste JD into Manual Tailor."
     }
   ],
-  "desktop_folder": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-04",
-  "zip_path": "C:\\Users\\kalek\\Desktop\\4 October.zip",
-  "catalog_pdf": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-04\\Resume_Created_Jobs.pdf",
-  "summary_pdf": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-04\\Summary.pdf",
-  "summary_md": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-04\\Summary.md"
+  "desktop_folder": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-14",
+  "zip_path": "C:\\Users\\kalek\\Desktop\\14 October 2026.zip",
+  "catalog_pdf": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-14\\Resume_Created_Jobs.pdf",
+  "summary_pdf": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-14\\Summary.pdf",
+  "summary_md": "C:\\Users\\kalek\\Desktop\\Tailored_Resumes_2026-10-14\\Summary.md"
 }

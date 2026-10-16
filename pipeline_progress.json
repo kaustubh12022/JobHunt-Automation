@@ -1,16 +1,17 @@
 {
   "phase": "done",
-  "status_text": "Pipeline complete in 41m 23s!",
-  "start_time": "2026-10-05T15:39:51.969688",
-  "jobs_scraped": 774,
-  "current_cycle": "Hirist (fulltime)",
+  "status_text": "Pipeline complete in 51m 37s!",
+  "start_time": "2026-10-14T14:41:26.281229",
+  "jobs_scraped": 98,
+  "current_cycle": "Workday API (fulltime)",
   "offpeak_active": true,
-  "jobs_scored": 80,
-  "jobs_shortlisted": 80,
-  "resumes_generated": 80,
+  "jobs_scored": 7,
+  "jobs_shortlisted": 7,
+  "resumes_generated": 7,
   "table_pdf_path": "C:\\Users\\kalek\\Desktop\\Job_Applications_Table.pdf",
-  "zip_path": "C:\\Users\\kalek\\Desktop\\5 October.zip",
+  "zip_path": "C:\\Users\\kalek\\Desktop\\14 October 2026.zip",
   "complete": true,
-  "updated_at": "2026-10-05T16:21:15.213415",
-  "elapsed_seconds": 2483
+  "updated_at": "2026-10-14T15:33:03.740632",
+  "remaining_wait_seconds": 7,
+  "elapsed_seconds": 3097
 }

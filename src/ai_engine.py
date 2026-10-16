@@ -42,6 +42,20 @@ runtime_settings: Dict[str, Any] = {
 }
 
 
+DEEPSEEK_PRICING = {
+    "chat": {
+        "cache_hit": 0.07,
+        "cache_miss": 0.27,
+        "completion": 1.10,
+    },
+    "reasoner": {
+        "cache_hit": 0.14,
+        "cache_miss": 0.55,
+        "completion": 2.19,
+    },
+}
+
+
 def calculate_deepseek_cost(
     model: str, cached_tokens: int, miss_tokens: int, completion_tokens: int
 ) -> float:
@@ -50,18 +64,13 @@ def calculate_deepseek_cost(
     - deepseek-chat: Cache Hit: $0.07 / 1M, Cache Miss: $0.27 / 1M, Output: $1.10 / 1M
     - deepseek-reasoner: Cache Hit: $0.14 / 1M, Cache Miss: $0.55 / 1M, Output: $2.19 / 1M
     """
-    if "reasoner" in (model or "").lower() or "r1" in (model or "").lower():
-        cost = (
-            (cached_tokens * 0.14 / 1_000_000)
-            + (miss_tokens * 0.55 / 1_000_000)
-            + (completion_tokens * 2.19 / 1_000_000)
-        )
-    else:
-        cost = (
-            (cached_tokens * 0.07 / 1_000_000)
-            + (miss_tokens * 0.27 / 1_000_000)
-            + (completion_tokens * 1.10 / 1_000_000)
-        )
+    is_reasoner = "reasoner" in (model or "").lower() or "r1" in (model or "").lower()
+    rates = DEEPSEEK_PRICING["reasoner"] if is_reasoner else DEEPSEEK_PRICING["chat"]
+    cost = (
+        (cached_tokens * rates["cache_hit"] / 1_000_000)
+        + (miss_tokens * rates["cache_miss"] / 1_000_000)
+        + (completion_tokens * rates["completion"] / 1_000_000)
+    )
     return round(cost, 8)
 
 

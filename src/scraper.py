@@ -46,6 +46,7 @@ from src.scrapers.instahyre import scrape_instahyre
 from src.scrapers.internshala import scrape_internshala
 from src.scrapers.unstop import scrape_unstop
 from src.scrapers.hirist import scrape_hirist
+from src.scrapers.foundit import scrape_foundit
 from src.scorer import is_relevant_jd, matches_senior_title, requires_3_plus_years
 
 
@@ -236,7 +237,9 @@ def apply_pandas_filter(jobs: list[Job], locations: list[str], callbacks=None, t
             "job_type": getattr(j, "job_type", "fulltime"),
             "apply_type": getattr(j, "apply_type", "easy_apply"),
             "date_posted": getattr(j, "date_posted", None),
-            "is_remote": getattr(j, "is_remote", False)
+            "is_remote": getattr(j, "is_remote", False),
+            "min_experience": getattr(j, "min_experience", None),
+            "max_experience": getattr(j, "max_experience", None)
         })
 
     combined_df = pd.DataFrame(data)
@@ -315,6 +318,20 @@ def apply_pandas_filter(jobs: list[Job], locations: list[str], callbacks=None, t
                     callbacks["on_job_dropped"](row.get("title"), row.get("company"), "High experience required")
         combined_df = combined_df[~exp_mask]
 
+    # 5b. Structured Experience Metadata Filter
+    config = load_config()
+    max_exp_allowed = config.get('search', {}).get('max_experience_years', 0)
+    if 'min_experience' in combined_df.columns:
+        has_exp = combined_df['min_experience'].notna()
+        too_senior = has_exp & (combined_df['min_experience'] > max_exp_allowed)
+        dropped_struct = too_senior.sum()
+        if dropped_struct > 0:
+            logger.info(f"   [Exp Metadata] Dropped {dropped_struct} jobs with min_experience > {max_exp_allowed}")
+            if callbacks and "on_job_dropped" in callbacks:
+                for _, row in combined_df[too_senior].iterrows():
+                    callbacks["on_job_dropped"](row.get("title"), row.get("company"), f"min_experience > {max_exp_allowed}")
+        combined_df = combined_df[~too_senior]
+
     # 6. Robust Deduplication (Job URL + Known Company/Title)
     before_dedup = len(combined_df)
 
@@ -369,6 +386,8 @@ def apply_pandas_filter(jobs: list[Job], locations: list[str], callbacks=None, t
         )
         job.date_posted = row.get("date_posted")
         job.is_remote = row.get("is_remote", False)
+        job.min_experience = row.get("min_experience")
+        job.max_experience = row.get("max_experience")
         filtered_jobs.append(job)
 
     return filtered_jobs
@@ -470,7 +489,7 @@ def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=Fals
     global_total_cycles = 0
     batched_location = ", ".join(locations)  # e.g. "Pune, Mumbai, Bangalore"
     logger.info(f"📊 Session limit: {results_wanted_per_loc}/loc × {len(locations)} locs = {results_wanted_batched} results per batched call")
-    NON_JOBSPY_PLATFORMS = {"workday", "jsonld", "naukri", "instahyre", "internshala", "unstop", "hirist"}
+    NON_JOBSPY_PLATFORMS = {"workday", "jsonld", "naukri", "instahyre", "internshala", "unstop", "hirist", "foundit"}
     for jt in job_types:
         if stop_event and stop_event.is_set():
             break
@@ -479,7 +498,7 @@ def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=Fals
             jobspy_plats.remove("linkedin")
         if jobspy_plats:
             global_total_cycles += len(search_terms) if not test_mode else 1
-        for extra_plat in ["workday", "jsonld", "naukri", "instahyre", "internshala", "unstop", "hirist"]:
+        for extra_plat in ["workday", "jsonld", "naukri", "instahyre", "internshala", "unstop", "hirist", "foundit"]:
             if extra_plat in platforms:
                 global_total_cycles += 1
     
@@ -806,6 +825,29 @@ def run_scraper(selected_platforms=None, selected_job_types=None, test_mode=Fals
                         callbacks["on_job_scraped"]({"title": h_job.title, "company": h_job.company, "platform": h_job.source, "cycle": cycle_label, "job": h_job})
             except Exception as e:
                 logger.error(f"   [Error] Error scraping Hirist: {e}")
+                if callbacks and "on_error" in callbacks:
+                    callbacks["on_error"](str(e))
+
+        # 9. Foundit Module
+        if "foundit" in platforms:
+            cycle_label = f"Foundit ({jt})"
+            if callbacks and "on_cycle_start" in callbacks:
+                callbacks["on_cycle_start"]({"cycle_label": cycle_label, "platforms": ["foundit"], "jt": jt, "term": "Foundit Search", "loc": batched_location})
+            try:
+                f_terms = search_terms if not test_mode else [search_terms[0]]
+                f_jobs = scrape_foundit(search_terms=f_terms, locations=locations, job_type=jt, max_results_per_query=results_wanted_per_loc, hours_old=hours_old)
+                for f_job in f_jobs:
+                    all_raw_jobs.append(f_job)
+                    _LAST_RAW_JOBS.append(f_job)
+                    if callbacks and "on_raw_job" in callbacks:
+                        try:
+                            callbacks["on_raw_job"](f_job)
+                        except Exception:
+                            pass
+                    if callbacks and "on_job_scraped" in callbacks:
+                        callbacks["on_job_scraped"]({"title": f_job.title, "company": f_job.company, "platform": f_job.source, "cycle": cycle_label, "job": f_job})
+            except Exception as e:
+                logger.error(f"   [Error] Error scraping Foundit: {e}")
                 if callbacks and "on_error" in callbacks:
                     callbacks["on_error"](str(e))
 

@@ -561,3 +561,49 @@ def test_m3_demonstrate_greater_than_30_percent_cost_reduction():
 
     assert savings_pct >= 30.0, f"Expected savings >= 30%, achieved {savings_pct:.2f}%"
     assert savings_pct >= 40.0, f"Optimized architecture should achieve >= 40% savings, got {savings_pct:.2f}%"
+
+
+def test_m3_scoring_and_tailoring_cost_accumulation_and_balance():
+    """Verify that tailoring tokens & cost accumulate onto Job and balance in ai_metrics."""
+    job = Job(title="Java Dev", company="TCS", location="Pune", description="Java, Spring", url="http://tcs.com/1")
+    assert job.cost_usd == 0.0
+    assert job.token_usage == {}
+
+    # 1. Scoring Phase
+    scoring_usage = TokenUsage({
+        "prompt_tokens": 1000,
+        "prompt_cache_hit_tokens": 800,
+        "prompt_cache_miss_tokens": 200,
+        "completion_tokens": 100,
+        "total_tokens": 1100,
+        "cost_usd": 0.0002,
+        "stage": "scoring"
+    })
+    job.tokens_used += scoring_usage["total_tokens"]
+    job.cost_usd += scoring_usage["cost_usd"]
+    job.token_usage = dict(scoring_usage)
+
+    # 2. Tailoring Phase
+    tailoring_usage = TokenUsage({
+        "prompt_tokens": 1500,
+        "prompt_cache_hit_tokens": 1200,
+        "prompt_cache_miss_tokens": 300,
+        "completion_tokens": 400,
+        "reasoning_tokens": 150,
+        "total_tokens": 1900,
+        "cost_usd": 0.0006,
+        "stage": "tailoring"
+    })
+    job.tokens_used += tailoring_usage["total_tokens"]
+    job.cost_usd += tailoring_usage["cost_usd"]
+    for k in ['prompt_tokens', 'prompt_cache_hit_tokens', 'prompt_cache_miss_tokens', 'completion_tokens', 'reasoning_tokens']:
+        job.token_usage[k] = job.token_usage.get(k, 0) + tailoring_usage.get(k, 0)
+    job.token_usage['total_tokens'] = job.tokens_used
+    job.token_usage['cost_usd'] = job.cost_usd
+
+    assert job.tokens_used == 3000
+    assert job.cost_usd == pytest.approx(0.0008)
+    assert job.token_usage["prompt_tokens"] == 2500
+    assert job.token_usage["completion_tokens"] == 500
+    assert job.token_usage["prompt_tokens"] + job.token_usage["completion_tokens"] == job.tokens_used
+

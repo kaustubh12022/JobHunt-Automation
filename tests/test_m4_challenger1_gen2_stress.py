@@ -47,10 +47,10 @@ def test_stress_authentic_skills_preserved(master_resume):
     Ensure all authentic candidate skills (including punctuation and short names) are accepted.
     """
     authentic_skills = [
-        "Java", "Python", "SQL", "C#", ".NET", "HTML", "CSS", "Git",
-        "Maven", "Postman", "Selenium", "JUnit", "pytest", "DBMS",
+        "Java", "Python", "SQL", "React", "Next.js", "Node.js", "MongoDB", "Spring Boot",
+        "HTML", "CSS", "Git", "Maven", "Postman", "DeepSeek API", "DBMS",
         "OOP", "DSA", "REST APIs", "Asyncio", "Pandas",
-        "Manual Testing Fundamentals", "Test Case Design", "MySQL"
+        "FastAPI", "MySQL"
     ]
     for skill in authentic_skills:
         valid, canonical = is_valid_candidate_skill(skill, master_resume)
@@ -62,8 +62,9 @@ def test_stress_alias_normalization(master_resume):
     Test edge cases in skill alias variations.
     """
     alias_tests = [
-        ("csharp", "C#"),
-        ("dotnet", "C#"),
+        ("js", "JavaScript"),
+        ("ts", "TypeScript"),
+        ("spring", "Spring Core"),
         ("dsa", "DSA"),
         ("oop", "OOP"),
         ("object oriented programming", "OOP"),

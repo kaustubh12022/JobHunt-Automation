@@ -67,7 +67,7 @@ The project has **two execution interfaces**:
 ### Key Design Principles
 - **Token Optimization**: Multi-layer filtering eliminates jobs *before* they reach the expensive AI API, reducing token costs by ~80%
 - **Concurrent Processing**: All AI calls (scoring + tailoring) use `asyncio.gather()` for massive parallelism
-- **Prompt Caching**: The master resume is pinned as the system prompt to trigger DeepSeek's discounted prompt caching rate ($0.0028/1M tokens)
+- **Prompt Caching**: The master resume is pinned as the system prompt to trigger DeepSeek's discounted prompt caching rate ($0.07/1M tokens)
 - **Delta Output**: AI returns only modified resume sections, not the full document, saving output tokens
 - **Single-Page Resume**: All generated resumes are constrained to exactly one A4 page via CSS + JS scaling
 
